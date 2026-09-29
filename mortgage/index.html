@@ -11,7 +11,7 @@
 <body>
   <header class="site-header">
     <div class="inner">
-      <a class="brand" href="/"><span class="logo">£</span> UK Finance Tools</a>
+      <a class="brand" href="/"><span class="logo">£</span><span class="brand-text">UK Finance Tools</span></a>
       <nav class="site-nav" aria-label="Tools">
         <a href="/income/">Take-home pay</a>
         <a href="/mortgage/" aria-current="page">Mortgage</a>
@@ -125,6 +125,65 @@
             </div>
           </div>
         </div>
+        <details class="section" id="sec-save">
+          <summary><span>Overpay or save?<span class="sub">Compare overpaying with putting the money in savings</span></span></summary>
+          <div class="body stack">
+            <div class="row">
+              <div class="field">
+                <label for="savingsRate">Savings interest rate</label>
+                <div class="input-wrap"><input id="savingsRate" name="sr" type="number" min="0" max="30" step="0.01" placeholder="e.g. 4"><span class="affix suffix">% a year</span></div>
+                <span class="hint">The best easy-access or fixed rate you could get.</span>
+              </div>
+              <div class="field">
+                <label for="savingsTax">Tax on that interest</label>
+                <select id="savingsTax" name="st" class="plain">
+                  <option value="0">None (ISA or within your savings allowance)</option>
+                  <option value="0.2">20% (basic rate)</option>
+                  <option value="0.4">40% (higher rate)</option>
+                  <option value="0.45">45% (additional rate)</option>
+                </select>
+              </div>
+            </div>
+            <p class="hint muted small">Uses the overpayments you entered above. Both options spend the same cash each month, so the comparison is fair.</p>
+          </div>
+        </details>
+
+        <details class="section" id="sec-btl">
+          <summary><span>Buy-to-let<span class="sub">Rental income, tax with the mortgage interest restriction, yield</span></span></summary>
+          <div class="body stack">
+            <div class="row">
+              <div class="field">
+                <label for="rentMonthly">Monthly rent</label>
+                <div class="input-wrap"><span class="affix">£</span><input id="rentMonthly" name="rent" data-money placeholder="e.g. 1,200"></div>
+              </div>
+              <div class="field">
+                <label for="btlExpenses">Other costs per year</label>
+                <div class="input-wrap"><span class="affix">£</span><input id="btlExpenses" name="bex" data-money placeholder="0"></div>
+                <span class="hint">Letting agent, insurance, repairs, service charge.</span>
+              </div>
+            </div>
+            <div class="row">
+              <div class="field">
+                <label for="btlTaxRate">Your income tax rate</label>
+                <select id="btlTaxRate" name="btr" class="plain">
+                  <option value="0.2">Basic rate (20%)</option>
+                  <option value="0.4" selected>Higher rate (40%)</option>
+                  <option value="0.45">Additional rate (45%)</option>
+                  <option value="0.21">Scottish intermediate (21%)</option>
+                  <option value="0.42">Scottish higher (42%)</option>
+                  <option value="0.48">Scottish top (48%)</option>
+                </select>
+                <span class="hint">The rate the rental profit would be taxed at on top of your other income.</span>
+              </div>
+              <div class="field">
+                <label for="btlRelief">Mortgage interest tax credit</label>
+                <div class="input-wrap"><input id="btlRelief" name="brl" type="number" min="0" max="100" step="1" value="20"><span class="affix suffix">%</span></div>
+                <span class="hint">Landlords get a 20% credit on finance costs instead of deducting them.</span>
+              </div>
+            </div>
+          </div>
+        </details>
+
         <p class="muted small" style="margin-top:16px">Results update as you type. Your inputs are saved in the page address so you can bookmark or share them.</p>
       </div>
 
@@ -137,6 +196,7 @@
   <div class="mobile-summary" id="mobile-summary" hidden>
     <div><div class="k">Monthly payment</div><div class="v" id="ms-pay">£0</div></div>
     <div style="text-align:right"><div class="k">Total interest</div><div class="v" id="ms-int">£0</div></div>
+    <a href="#results">Details ↓</a>
   </div>
 
   <footer class="site-footer">

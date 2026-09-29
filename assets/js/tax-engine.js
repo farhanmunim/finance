@@ -20,7 +20,24 @@
  *  6. National Insurance: Class 1 (employees) on an annual basis, Class 4 on profits, with the
  *     statutory interaction (annual maximum) when someone has both.
  *  7. Student loans on the combined income.
+ *
+ * Property income: finance costs (mortgage interest) are not deductible; a tax reducer of
+ * 20% of the lower of finance costs, property profits and adjusted total income applies.
  */
+
+/** Deep-clone a rates object and apply {path: value} overrides (paths like "incomeTax.bands.ruk.0.rate"). */
+export function applyOverrides(rates, overrides = {}) {
+  const out = JSON.parse(JSON.stringify(rates));
+  for (const [path, value] of Object.entries(overrides)) {
+    if (value === '' || value == null) continue;
+    const keys = path.split('.');
+    let o = out;
+    for (const k of keys.slice(0, -1)) { if (o[k] == null) o[k] = {}; o = o[k]; }
+    const last = keys[keys.length - 1];
+    o[last] = value === 'null' ? null : Number(value);
+  }
+  return out;
+}
 
 const round2 = (n) => Math.round((n + Number.EPSILON) * 100) / 100;
 const num = (v) => {
@@ -98,6 +115,7 @@ export function calculate(input = {}, rates) {
   const salary = num(emp.salary);
   const bonus = num(emp.bonus);
   const benefits = num(emp.taxableBenefits);
+  const empExpenses = num(emp.expenses); // allowable employment expenses (reduce tax, not NI)
   const grossPay = salary + bonus;
   const pension = emp.pension || {};
   const method = ['salary_sacrifice', 'net_pay', 'relief_at_source'].includes(pension.method) ? pension.method : 'none';
@@ -122,7 +140,7 @@ export function calculate(input = {}, rates) {
     rasGrossEmployment = pensionGross;
     pensionCash = pensionGross * (1 - basicRate);
   }
-  const employmentIncome = taxablePay + benefits;
+  const employmentIncome = Math.max(0, taxablePay + benefits - empExpenses);
 
   // ---------------------------------------------------------------- 2. Self-employment
   const se = input.selfEmployment || {};
@@ -141,13 +159,26 @@ export function calculate(input = {}, rates) {
   const sePensionPaid = num(se.pensionPaid);
   const sePensionGross = sePensionPaid / (1 - basicRate);
 
-  // ---------------------------------------------------------------- 3. Other income
+  // ---------------------------------------------------------------- 3. Property income
+  // Residential landlords cannot deduct mortgage interest (finance costs) from rental income.
+  // Instead they get a tax reducer of 20% of the finance costs, capped (see below).
+  const prop = input.property || {};
+  const rent = num(prop.rentalIncome);
+  const propExpenses = num(prop.expenses);
+  const financeCosts = num(prop.financeCosts);
+  const usePropertyAllowance = prop.deduction === 'property_allowance';
+  const propertyAllowanceUsed = usePropertyAllowance ? Math.min(it.propertyAllowance, rent) : 0;
+  const propExpensesUsed = usePropertyAllowance ? 0 : Math.min(propExpenses, rent);
+  if (!usePropertyAllowance && propExpenses > rent && rent > 0) warnings.push('Property expenses exceed rental income. Property losses are not modelled; profit has been treated as £0.');
+  const propertyProfit = Math.max(0, rent - propertyAllowanceUsed - propExpensesUsed);
+
+  // ---------------------------------------------------------------- 4. Other income
   const other = input.other || {};
   const savings = num(other.savingsInterest);
   const dividends = num(other.dividends);
   const otherIncome = num(other.otherIncome);
 
-  const nonSavings = employmentIncome + profit + otherIncome;
+  const nonSavings = employmentIncome + profit + propertyProfit + otherIncome;
   const totalIncome = nonSavings + savings + dividends;
 
   // ---------------------------------------------------------------- 4. Adjustments & allowances
@@ -227,7 +258,18 @@ export function calculate(input = {}, rates) {
     if (eligible) marriageReducer = Math.min(taxBeforeReducers, it.marriageAllowanceTransfer * basicRate);
     else warnings.push('Marriage Allowance can only be received by basic-rate taxpayers (starter, basic or intermediate rate in Scotland), so it has not been applied.');
   }
-  const incomeTaxTotal = Math.max(0, taxBeforeReducers - marriageReducer);
+  // Finance cost tax reduction: 20% of the lower of finance costs, property profits and
+  // adjusted total income (non-savings income after allowances). Not available with the
+  // property allowance. Unused amounts carry forward (not modelled).
+  let financeCostReducer = 0;
+  let financeCostReliefBase = 0;
+  if (financeCosts > 0 && !usePropertyAllowance) {
+    financeCostReliefBase = Math.min(financeCosts, propertyProfit, taxableNS);
+    financeCostReducer = Math.min(Math.max(0, taxBeforeReducers - marriageReducer), financeCostReliefBase * it.financeCostReliefRate);
+  } else if (financeCosts > 0 && usePropertyAllowance) {
+    warnings.push('Mortgage interest relief cannot be claimed together with the property allowance, so it has not been applied.');
+  }
+  const incomeTaxTotal = Math.max(0, taxBeforeReducers - marriageReducer - financeCostReducer);
 
   // ---------------------------------------------------------------- 6. National Insurance
   const c1 = ni.class1;
@@ -256,7 +298,7 @@ export function calculate(input = {}, rates) {
 
   // ---------------------------------------------------------------- 7. Student loans
   const plans = Array.isArray(input.studentLoans) ? input.studentLoans.filter((p) => sl[p]) : [];
-  const unearned = savings + dividends + otherIncome;
+  const unearned = savings + dividends + otherIncome + propertyProfit;
   const slUnearned = unearned > sl.unearnedIncomeLimit ? unearned : 0;
   const slIncome = taxablePay + profit + slUnearned;
   const undergradPlans = plans.filter((p) => p !== 'postgraduate');
@@ -274,6 +316,7 @@ export function calculate(input = {}, rates) {
 
   // ---------------------------------------------------------------- 8. High Income Child Benefit Charge
   const children = Math.max(0, Math.floor(num(adj.childBenefitChildren)));
+  const optedOut = !!adj.childBenefitOptedOut;
   let hicbc = null;
   if (children > 0 && rates.childBenefit) {
     const cb = rates.childBenefit;
@@ -281,14 +324,20 @@ export function calculate(input = {}, rates) {
     let percent = 0;
     if (adjustedNetIncome >= cb.hicbc.fullWithdrawal) percent = 100;
     else if (adjustedNetIncome > cb.hicbc.threshold) percent = Math.min(100, Math.floor((adjustedNetIncome - cb.hicbc.threshold) / cb.hicbc.stepPounds) * cb.hicbc.stepPercent);
-    hicbc = { children, childBenefitAnnual: round2(annual), percent, charge: Math.floor(annual * percent / 100), threshold: cb.hicbc.threshold, fullWithdrawal: cb.hicbc.fullWithdrawal };
+    const charge = optedOut ? 0 : Math.floor(annual * percent / 100);
+    const received = optedOut ? 0 : round2(annual);
+    hicbc = { children, optedOut, childBenefitAnnual: round2(annual), received, percent, charge, netKept: round2(received - charge), threshold: cb.hicbc.threshold, fullWithdrawal: cb.hicbc.fullWithdrawal };
+    if (optedOut && percent > 0 && percent < 100) warnings.push(`You have opted out of Child Benefit payments but would only lose ${percent}% of them to the charge - claiming and paying the charge would leave you ${new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP', maximumFractionDigits: 0 }).format(annual - Math.floor(annual * percent / 100))} a year better off.`);
   }
   const hicbcCharge = hicbc?.charge || 0;
+  const childBenefitReceived = hicbc?.received || 0;
 
   // ---------------------------------------------------------------- 9. Totals
-  const cashIncome = grossPay + profit + savings + dividends + otherIncome;
+  // Property: rent less expenses less finance costs is the cash that actually arrives.
+  const propertyCash = Math.max(0, rent - propExpensesUsed - (usePropertyAllowance ? propExpenses : 0)) - financeCosts;
+  const cashIncome = grossPay + profit + Math.max(0, rent - propExpensesUsed - (usePropertyAllowance ? propExpenses : 0)) + savings + dividends + otherIncome;
   const totalDeductions = incomeTaxTotal + niTotal + studentLoanTotal + hicbcCharge;
-  const takeHome = cashIncome - pensionCash - sePensionPaid - totalDeductions;
+  const takeHome = cashIncome - financeCosts - pensionCash - sePensionPaid - totalDeductions + childBenefitReceived;
   const grossIncome = totalIncome + (method === 'salary_sacrifice' || method === 'net_pay' ? pensionGross : 0);
 
   const r = (v) => round2(v);
@@ -299,8 +348,9 @@ export function calculate(input = {}, rates) {
     region,
     warnings,
     income: {
-      employment: { salary, bonus, grossPay, taxableBenefits: benefits, pensionMethod: method, pensionGross: r(pensionGross), pensionCash: r(pensionCash), taxablePay: r(taxablePay), niablePay: r(niablePay), taxableIncome: r(employmentIncome) },
+      employment: { salary, bonus, grossPay, taxableBenefits: benefits, expenses: empExpenses, pensionMethod: method, pensionGross: r(pensionGross), pensionCash: r(pensionCash), taxablePay: r(taxablePay), niablePay: r(niablePay), taxableIncome: r(employmentIncome) },
       selfEmployment: { turnover, expenses, deduction: useTradingAllowance ? 'trading_allowance' : 'expenses', tradingAllowanceUsed: r(tradingAllowanceUsed), expensesUsed: r(expensesUsed), profit: r(profit), pensionPaid: r(sePensionPaid), pensionGross: r(sePensionGross) },
+      property: { rentalIncome: rent, expenses: propExpenses, financeCosts, deduction: usePropertyAllowance ? 'property_allowance' : 'expenses', propertyAllowanceUsed: r(propertyAllowanceUsed), expensesUsed: r(propExpensesUsed), profit: r(propertyProfit), cash: r(propertyCash) },
       savings, dividends, otherIncome,
       nonSavings: r(nonSavings), total: r(totalIncome), gross: r(grossIncome), cash: r(cashIncome),
     },
@@ -319,7 +369,9 @@ export function calculate(input = {}, rates) {
       nonSavings: { pieces: roundPieces(nsPieces), tax: r(nonSavingsTax) },
       savings: { pieces: roundPieces(savPieces), tax: r(savingsTax), startingRateAvailable: r(startingRateAvail), personalSavingsAllowance: psa },
       dividends: { pieces: roundPieces(divPieces), tax: r(dividendTax), allowance: it.dividends.allowance },
-      beforeReducers: r(taxBeforeReducers), marriageReducer: r(marriageReducer), total: r(incomeTaxTotal),
+      beforeReducers: r(taxBeforeReducers), marriageReducer: r(marriageReducer),
+      financeCostReducer: r(financeCostReducer), financeCostReliefBase: r(financeCostReliefBase), financeCostReliefRate: it.financeCostReliefRate,
+      total: r(incomeTaxTotal),
     },
     nationalInsurance: {
       class1: { niablePay: r(niablePay), primaryThreshold: c1.primaryThreshold, upperEarningsLimit: c1.upperEarningsLimit, mainRate: c1.employeeMainRate, upperRate: c1.employeeUpperRate, main: r(class1Main), upper: r(class1Upper), total: r(class1Employee), employer: r(class1Employer), employerRate: c1.employerRate, secondaryThreshold: c1.secondaryThreshold },
@@ -331,7 +383,7 @@ export function calculate(input = {}, rates) {
     hicbc,
     totals: {
       grossIncome: r(grossIncome), cashIncome: r(cashIncome), pensionCash: r(pensionCash + sePensionPaid),
-      incomeTax: r(incomeTaxTotal), nationalInsurance: r(niTotal), studentLoans: studentLoanTotal, hicbc: hicbcCharge,
+      incomeTax: r(incomeTaxTotal), nationalInsurance: r(niTotal), studentLoans: studentLoanTotal, hicbc: hicbcCharge, childBenefitReceived: r(childBenefitReceived), financeCosts: r(financeCosts),
       totalDeductions: r(totalDeductions), takeHome: r(takeHome), takeHomeMonthly: r(takeHome / 12), takeHomeWeekly: r(takeHome / 52),
       effectiveRate: cashIncome > 0 ? totalDeductions / cashIncome : 0,
       employerCost: r(grossPay + class1Employer + (method === 'salary_sacrifice' ? pensionGross : 0)),

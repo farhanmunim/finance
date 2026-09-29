@@ -1,4 +1,4 @@
-import { amortise, compare, monthlyPayment } from './mortgage-engine.js';
+import { amortise, compare, overpayVsSave, breakEvenSavingsRate, rateSensitivity, ltvBands, buyToLet } from './mortgage-engine.js';
 import { fmt, parseNum, initMoneyInputs, $, $$, el, linesTable, urlState, debounce } from './ui.js';
 
 const form = $('#form');
@@ -32,7 +32,8 @@ function syncVisibility() {
 
 function readForm() {
   const f = form;
-  const raw = { pv: f.pv.value, dep: f.dep.value, dt: f.dt.value, t: f.t.value, r: f.r.value, type: f.type.value, fy: f.fy.value, rr: f.rr.value, op: f.op.checked ? '1' : '', pay: f.pay.value, mo: f.mo.value, ao: f.ao.value, ls: f.ls.value, ly: f.ly.value, eff: f.eff.value };
+  const raw = { pv: f.pv.value, dep: f.dep.value, dt: f.dt.value, t: f.t.value, r: f.r.value, type: f.type.value, fy: f.fy.value, rr: f.rr.value, op: f.op.checked ? '1' : '', pay: f.pay.value, mo: f.mo.value, ao: f.ao.value, ls: f.ls.value, ly: f.ly.value, eff: f.eff.value,
+    sr: f.sr.value, st: f.st.value, rent: f.rent.value, bex: f.bex.value, btr: f.btr.value, brl: f.brl.value };
   const price = parseNum(raw.pv);
   const depositInput = parseNum(raw.dep);
   const deposit = raw.dt === 'percent' ? price * depositInput / 100 : depositInput;
@@ -52,14 +53,26 @@ function readForm() {
     lumpSumMonth: Math.max(1, Math.round(parseNum(raw.ly)) || 1) * 12,
     overpaymentEffect: raw.eff,
   };
-  return { raw, opts, price, deposit, principal, termYears };
+  const extras = {
+    savingsRate: raw.sr.trim() === '' ? null : parseNum(raw.sr),
+    savingsTax: parseNum(raw.st),
+    rentMonthly: parseNum(raw.rent),
+    btlExpenses: parseNum(raw.bex),
+    btlTaxRate: parseNum(raw.btr),
+    btlRelief: parseNum(raw.brl) / 100,
+  };
+  return { raw, opts, price, deposit, principal, termYears, extras };
 }
 
 function restoreFromUrl() {
   const q = urlState.read();
   const f = form;
   const setRadio = (name, v) => { const r = $(`input[name="${name}"][value="${v}"]`, f); if (r) r.checked = true; };
-  for (const k of ['pv', 'dep', 't', 'r', 'fy', 'rr', 'pay', 'mo', 'ao', 'ls', 'ly']) if (q[k] != null && f[k]) f[k].value = q[k];
+  for (const k of ['pv', 'dep', 't', 'r', 'fy', 'rr', 'pay', 'mo', 'ao', 'ls', 'ly', 'sr', 'rent', 'bex', 'brl']) if (q[k] != null && f[k]) f[k].value = q[k];
+  if (q.st) f.st.value = q.st;
+  if (q.btr) f.btr.value = q.btr;
+  if (q.sr) $('#sec-save').open = true;
+  if (q.rent) $('#sec-btl').open = true;
   if (q.dt) setRadio('dt', q.dt);
   if (q.type) setRadio('type', q.type);
   if (q.eff) setRadio('eff', q.eff);
@@ -68,7 +81,7 @@ function restoreFromUrl() {
 }
 
 function render() {
-  const { raw, opts, price, deposit, principal, termYears } = readForm();
+  const { raw, opts, price, deposit, principal, termYears, extras } = readForm();
   urlState.write(raw);
   const note = $('#loan-note');
   if (principal > 0 && price > 0) {
@@ -93,6 +106,10 @@ function render() {
   results.append(heroCard(c, opts, principal, price, termYears));
   if (c.hasOverpayments) results.append(comparisonCard(c, opts));
   results.append(chartCard(c, opts));
+  results.append(saveCard(c, opts, extras));
+  if (extras.rentMonthly > 0) results.append(btlCard(c.base, opts, extras, price));
+  results.append(sensitivityCard(opts));
+  results.append(ltvCard(price, principal));
   results.append(scheduleCard(main, c));
   results.append(assumptionsCard(opts));
   $('#ms-pay').textContent = fmt.gbp(main.initialPayment, 2);
@@ -177,16 +194,21 @@ function yearlyBalances(run, principal) {
   return pts;
 }
 
-function lineChart(series) {
+function lineChart(series, { xLabel = (x) => (x === 0 ? 'Now' : `Yr ${x}`), tipLabel = (x) => (x === 0 ? 'Now' : `End of year ${x}`) } = {}) {
   const W = Math.max(320, Math.min(760, (results.clientWidth || 640) - 42));
   const H = Math.round(W < 480 ? W * 0.62 : W * 0.47);
   const m = { top: 16, right: 20, bottom: 36, left: 56 };
   const iw = W - m.left - m.right, ih = H - m.top - m.bottom;
   const xMax = Math.max(1, ...series.map((s) => s.data[s.data.length - 1].x));
-  const yMax = Math.max(1, ...series.flatMap((s) => s.data.map((p) => p.y)));
-  const niceY = niceCeil(yMax);
+  const ys = series.flatMap((s) => s.data.map((p) => p.y));
+  const yMaxRaw = Math.max(0, ...ys), yMinRaw = Math.min(0, ...ys);
+  const step = niceCeil(Math.max(1, (yMaxRaw - yMinRaw) / 4));
+  const niceY = Math.ceil(yMaxRaw / step) * step;
+  const niceMin = Math.floor(yMinRaw / step) * step;
+  const span = Math.max(1, niceY - niceMin);
+  const ySteps = Math.round(span / step);
   const sx = (x) => m.left + (x / xMax) * iw;
-  const sy = (y) => m.top + ih - (y / niceY) * ih;
+  const sy = (y) => m.top + ih - ((y - niceMin) / span) * ih;
   const ns = 'http://www.w3.org/2000/svg';
   const svg = document.createElementNS(ns, 'svg');
   svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
@@ -195,20 +217,19 @@ function lineChart(series) {
   const add = (tag, attrs, parent = svg) => { const n = document.createElementNS(ns, tag); for (const [k, v] of Object.entries(attrs)) n.setAttribute(k, v); parent.append(n); return n; };
 
   // grid + y labels
-  const ySteps = 4;
   for (let i = 0; i <= ySteps; i++) {
-    const v = (niceY / ySteps) * i, y = sy(v);
+    const v = niceMin + (span / ySteps) * i, y = sy(v);
     add('line', { x1: m.left, x2: W - m.right, y1: y, y2: y, stroke: '#e5e7eb', 'stroke-width': 1 });
     const t = add('text', { x: m.left - 8, y: y + 4, 'text-anchor': 'end', 'font-size': 12, fill: '#6b7280' });
     t.textContent = compactGbp(v);
   }
   // x labels
-  const xStep = xMax <= 10 ? 1 : xMax <= 20 ? 2 : 5;
+  const xStep = W < 480 ? (xMax <= 6 ? 1 : xMax <= 12 ? 2 : 5) : (xMax <= 10 ? 1 : xMax <= 20 ? 2 : 5);
   for (let x = 0; x <= xMax; x += xStep) {
     const t = add('text', { x: sx(x), y: H - m.bottom + 18, 'text-anchor': 'middle', 'font-size': 12, fill: '#6b7280' });
-    t.textContent = x === 0 ? 'Now' : `Yr ${x}`;
+    t.textContent = xLabel(x);
   }
-  add('line', { x1: m.left, x2: W - m.right, y1: sy(0), y2: sy(0), stroke: '#d1d5db', 'stroke-width': 1 });
+  add('line', { x1: m.left, x2: W - m.right, y1: sy(0), y2: sy(0), stroke: '#9ca3af', 'stroke-width': 1 });
 
   for (const s of series) {
     const d = s.data.map((p, i) => `${i ? 'L' : 'M'}${sx(p.x).toFixed(1)},${sy(p.y).toFixed(1)}`).join(' ');
@@ -226,15 +247,18 @@ function lineChart(series) {
     const x = Math.round(((px - m.left) / iw) * xMax);
     if (x < 0 || x > xMax) return onLeave();
     cross.setAttribute('x1', sx(x)); cross.setAttribute('x2', sx(x)); cross.setAttribute('opacity', 1);
-    const lines = [`<div>${x === 0 ? 'Now' : `End of year ${x}`}</div>`];
+    const lines = [`<div>${tipLabel(x)}</div>`];
     series.forEach((s, i) => {
       const p = s.data.find((q) => q.x === x);
       if (p) { dots[i].setAttribute('cx', sx(x)); dots[i].setAttribute('cy', sy(p.y)); dots[i].setAttribute('opacity', 1); lines.push(`<div><span style="color:${s.color}">●</span> ${s.name}: <b>${fmt.gbp(p.y)}</b></div>`); }
       else dots[i].setAttribute('opacity', 0);
     });
     tip.innerHTML = lines.join('');
-    tip.style.left = `${(sx(x) / W) * rect.width}px`;
+    const px2 = (sx(x) / W) * rect.width;
+    tip.style.left = `${px2}px`;
     tip.style.top = `${(m.top / H) * rect.height + 10}px`;
+    tip.classList.toggle('left', px2 < rect.width * 0.25);
+    tip.classList.toggle('right', px2 > rect.width * 0.75);
     tip.classList.add('show');
   };
   const onLeave = () => { cross.setAttribute('opacity', 0); dots.forEach((d) => d.setAttribute('opacity', 0)); tip.classList.remove('show'); };
@@ -254,9 +278,123 @@ function niceCeil(v) {
   return n * p;
 }
 function compactGbp(v) {
-  if (v >= 1e6) return `£${(v / 1e6).toFixed(v % 1e6 ? 1 : 0)}m`;
-  if (v >= 1e3) return `£${Math.round(v / 1e3)}k`;
-  return `£${Math.round(v)}`;
+  const sign = v < 0 ? '−' : '';
+  const a = Math.abs(v);
+  if (a >= 1e6) return `${sign}£${(a / 1e6).toFixed(a % 1e6 ? 1 : 0)}m`;
+  if (a >= 1e3) return `${sign}£${Math.round(a / 1e3)}k`;
+  return `${sign}£${Math.round(a)}`;
+}
+
+// ------------------------------------------------------------------ overpay vs save
+function saveCard(c, opts, extras) {
+  const card = el('div', { class: 'card' });
+  card.append(el('div', { class: 'card-header' }, [el('div', {}, [el('h2', { text: 'Overpay or save?' }), el('p', { text: 'Is your spare cash better off reducing the mortgage or earning interest?' })])]));
+  if (!c.hasOverpayments) {
+    card.append(el('p', { class: 'muted small', text: 'Add an overpayment in the form to compare putting that money into savings instead.' }));
+    return card;
+  }
+  const taxRate = extras.savingsTax || 0;
+  const be = breakEvenSavingsRate(opts, taxRate);
+  const rateLine = be == null
+    ? 'No realistic savings rate beats overpaying here.'
+    : `Savings need to pay more than <b class="num">${be.toFixed(2)}%</b>${taxRate ? ` before tax (${(be * (1 - taxRate)).toFixed(2)}% after ${fmt.pct(taxRate, 0)} tax)` : ''} to beat overpaying this mortgage.`;
+  if (extras.savingsRate == null) {
+    card.append(el('div', { class: 'note-box', html: rateLine + ' Enter a savings rate in the "Overpay or save?" section to see the full comparison.' }));
+    card.append(saveExplain());
+    return card;
+  }
+  const v = overpayVsSave(opts, extras.savingsRate, taxRate);
+  if (!v) return card;
+  const wins = v.advantage >= 0;
+  card.append(el('div', { class: `note-box ${Math.abs(v.advantage) < 1 ? '' : 'good'}`, html: `${wins ? 'Overpaying wins' : 'Saving wins'} by <b class="num">${fmt.gbp(Math.abs(v.advantage))}</b> after ${fmt.months(v.horizonMonths)} at a savings rate of ${extras.savingsRate}%${taxRate ? ` (${v.netRate}% after tax)` : ''}. ${rateLine}` }));
+  card.append(el('div', { class: 'table-scroll' }, linesTable([
+    ['Interest paid on the mortgage', fmt.gbp(v.save.interestPaid), { mid: fmt.gbp(v.overpay.interestPaid) }],
+    ['Savings built up', fmt.gbp(v.save.savings), { mid: fmt.gbp(v.overpay.savings), note: 'Overpaying: once the mortgage is cleared the freed-up payments go into savings.' }],
+    ['Savings interest earned', fmt.gbp(v.save.interestEarned), { mid: fmt.gbp(v.overpay.interestEarned) }],
+    ['Mortgage still owed', fmt.gbp(v.save.balance), { mid: fmt.gbp(v.overpay.balance) }],
+    ['Net position (savings − mortgage)', fmt.gbp(v.save.net), { mid: fmt.gbp(v.overpay.net), total: true }],
+  ], { header: ['At the end of the term', 'Overpay', 'Save instead'] })));
+  card.append(el('div', { style: 'margin-top:14px' }, [el('h3', { text: 'Net position over time', style: 'margin-bottom:6px' }), lineChart([
+    { name: 'Overpay the mortgage', color: COLOR_OVER, data: [{ x: 0, y: -opts.principal }, ...v.yearly.map((y) => ({ x: y.year, y: y.netA }))] },
+    { name: 'Save instead', color: COLOR_BASE, data: [{ x: 0, y: -opts.principal }, ...v.yearly.map((y) => ({ x: y.year, y: y.netB }))] },
+  ])]));
+  card.append(saveExplain());
+  return card;
+}
+function saveExplain() {
+  return el('details', { class: 'explain' }, [el('summary', { text: 'How this comparison works' }), el('div', { class: 'body' }, [
+    el('p', { text: 'Both options spend exactly the same money each month: the normal mortgage payment plus your overpayment. In one, the extra goes into the mortgage (and once it is paid off, or the payment drops, the freed-up cash goes into savings). In the other, the mortgage runs as normal and the extra goes into a savings account compounding monthly.' }),
+    el('p', { text: 'At the end of the original term we compare "net position": savings minus anything still owed. The break-even rate is the savings rate at which the two come out equal; it is roughly your mortgage rate grossed up for any tax you pay on interest.' }),
+    el('p', { text: 'Things this ignores: the peace of mind and flexibility of accessible savings, an emergency fund, early repayment charges, and pension contributions, which often beat both because of tax relief.' }),
+  ])]);
+}
+
+// ------------------------------------------------------------------ buy-to-let
+function btlCard(run, opts, extras, price) {
+  const card = el('div', { class: 'card' });
+  card.append(el('div', { class: 'card-header' }, [el('div', {}, [el('h2', { text: 'Buy-to-let: rent, tax and yield' }), el('p', { text: 'First-year figures using the mortgage above with standard payments.' })])]));
+  const y1 = run.yearly[0] || { interest: 0, paid: 0 };
+  const b = buyToLet({ annualRent: extras.rentMonthly * 12, annualExpenses: extras.btlExpenses, annualInterest: y1.interest, annualMortgagePayments: y1.paid, taxRate: extras.btlTaxRate, reliefRate: extras.btlRelief, price });
+  card.append(el('div', { class: 'hero' }, [
+    tile('Rent after costs and tax', fmt.gbp(b.cashAfterTax), b.cashAfterTax >= 0 ? 'a year, after mortgage payments' : 'a year - the property loses money', b.cashAfterTax >= 0),
+    tile('Tax on the rent', fmt.gbp(b.tax), `${fmt.pct(b.taxRate, 0)} rate, after the interest credit`),
+    tile('Gross yield', b.grossYield != null ? fmt.pct(b.grossYield) : '-', 'annual rent ÷ property value'),
+  ]));
+  card.append(el('div', { class: 'table-scroll', style: 'margin-top:14px' }, linesTable([
+    ['Rental income', fmt.gbp(b.rent)],
+    ['Running costs', '− ' + fmt.gbp(b.expenses), { neg: true }],
+    ['Taxable rental profit', fmt.gbp(b.profit), { total: true, note: 'Mortgage interest is not deducted here.' }],
+    [`Tax at ${fmt.pct(b.taxRate, 0)}`, fmt.gbp(b.taxBeforeCredit)],
+    [`Less ${fmt.pct(b.reliefRate, 0)} credit on ${fmt.gbp(b.creditBase)} of interest`, '− ' + fmt.gbp(b.credit), { neg: true, note: b.creditBase < b.interest ? 'Credit limited to the rental profit; the rest carries forward.' : null }],
+    ['Tax due', fmt.gbp(b.tax), { total: true }],
+    ['Mortgage payments (year 1)', '− ' + fmt.gbp(b.payments), { neg: true, note: `of which ${fmt.gbp(b.interest)} is interest` }],
+    ['Cash left after mortgage and tax', fmt.gbp(b.cashAfterTax), { total: true }],
+  ])));
+  if (b.extraTaxVsOldRules > 0) card.append(el('div', { class: 'note-box warn', style: 'margin-top:12px', html: `The interest restriction costs you <b class="num">${fmt.gbp(b.extraTaxVsOldRules)}</b> a year more tax than if interest were fully deductible (pre-2020 rules). ${b.effectiveTaxRate != null && b.effectiveTaxRate > b.taxRate + 1e-6 ? `That is an effective rate of ${fmt.pct(Math.min(9.99, b.effectiveTaxRate), 0)} on your real profit.` : ''}` }));
+  card.append(el('details', { class: 'explain' }, [el('summary', { text: 'How rental income is taxed' }), el('div', { class: 'body' }, [
+    el('p', { text: 'Rental profit is added to your other income and taxed at your marginal rate. Since April 2020 individual landlords cannot deduct mortgage interest; instead the tax bill is reduced by 20% of the interest, capped at the lower of the interest, the rental profit and your total taxable non-savings income. Capital repayments were never deductible. Companies, and furnished holiday lets before April 2025, had different rules.' }),
+    el('p', { text: 'Interest falls each year on a repayment mortgage, so the tax credit shrinks over time while rent usually rises. Stamp duty surcharges, capital gains tax on sale and void periods are not included. Use the take-home pay calculator to see the rent alongside your other income.' }),
+  ])]));
+  return card;
+}
+
+// ------------------------------------------------------------------ rate sensitivity
+function sensitivityCard(opts) {
+  const rows = rateSensitivity(opts).filter((r) => r.payment != null);
+  const card = el('div', { class: 'card' });
+  card.append(el('div', { class: 'card-header' }, [el('div', {}, [el('h2', { text: 'What if the rate changes?' }), el('p', { text: opts.type === 'interest_only' ? 'Monthly interest at different rates.' : 'Monthly payment at different rates, without overpayments.' })])]));
+  const max = Math.max(...rows.map((r) => r.payment));
+  const bars = el('div', { class: 'bars' });
+  for (const r of rows) {
+    bars.append(el('div', { class: `bar-row${r.current ? ' current' : ''}` }, [
+      el('span', { text: `${r.rate.toFixed(2)}%${r.current ? ' (now)' : ''}` }),
+      el('span', { class: 'track' }, el('span', { class: 'fill', style: `width:${(r.payment / max) * 100}%` })),
+      el('span', { class: 'val', text: fmt.gbp(r.payment, 2) }),
+    ]));
+  }
+  card.append(bars);
+  const up1 = rows.find((r) => r.delta === 1), cur = rows.find((r) => r.current);
+  if (up1 && cur) card.append(el('p', { class: 'muted small', style: 'margin-top:10px', text: `A 1 percentage point rise would add ${fmt.gbp(up1.payment - cur.payment, 2)} a month (${fmt.gbp((up1.payment - cur.payment) * 12)} a year).` }));
+  return card;
+}
+
+// ------------------------------------------------------------------ LTV
+function ltvCard(price, principal) {
+  const bands = ltvBands(price, principal);
+  const card = el('div', { class: 'card' });
+  const ltv = principal / price;
+  card.append(el('div', { class: 'card-header' }, [el('div', {}, [el('h2', { text: 'Deposit and loan-to-value' }), el('p', { text: `You are borrowing ${fmt.pct(ltv, 1)} of the property value. Lenders price in tiers - a bigger deposit can unlock a cheaper rate.` })])]));
+  const rows = bands.map((b) => [
+    `${fmt.pct(b.tier, 0)} LTV`,
+    b.reached ? 'Reached' : `Add ${fmt.gbp(b.extraDeposit)} to deposit`,
+    { mid: fmt.gbp(b.maxLoan) },
+  ]);
+  const table = linesTable(rows, { header: ['Tier', 'Max loan', 'To get there'] });
+  // highlight the next tier
+  const next = bands.findIndex((b) => !b.reached);
+  if (next >= 0) table.querySelectorAll('tbody tr')[next]?.classList.add('hl');
+  card.append(el('div', { class: 'table-scroll' }, table));
+  return card;
 }
 
 // ------------------------------------------------------------------ schedule

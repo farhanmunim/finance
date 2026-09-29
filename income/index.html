@@ -11,7 +11,7 @@
 <body>
   <header class="site-header">
     <div class="inner">
-      <a class="brand" href="/"><span class="logo">£</span> UK Finance Tools</a>
+      <a class="brand" href="/"><span class="logo">£</span><span class="brand-text">UK Finance Tools</span></a>
       <nav class="site-nav" aria-label="Tools">
         <a href="/income/" aria-current="page">Take-home pay</a>
         <a href="/mortgage/">Mortgage</a>
@@ -104,6 +104,11 @@
                   <div class="input-wrap"><span class="affix">£</span><input id="benefits" name="ben" data-money placeholder="0"></div>
                   <span class="hint">The taxable value of things like a company car or private medical insurance (from your P11D). Taxed but not paid to you as cash.</span>
                 </div>
+                <div class="field">
+                  <label for="empExpenses">Allowable work expenses</label>
+                  <div class="input-wrap"><span class="affix">£</span><input id="empExpenses" name="eex" data-money placeholder="0"></div>
+                  <span class="hint">Costs you must pay for your job that your employer does not reimburse, such as professional fees, uniform or business mileage. Reduce income tax only, not NI.</span>
+                </div>
               </div>
             </details>
           </div>
@@ -141,6 +146,37 @@
             </div>
           </div>
         </div>
+
+        <details class="section" id="sec-property">
+          <summary><span>Property income<span class="sub">Rent from a buy-to-let or lodger, mortgage interest relief</span></span></summary>
+          <div class="body stack">
+            <div class="row">
+              <div class="field">
+                <label for="rent">Rental income</label>
+                <div class="input-wrap"><span class="affix">£</span><input id="rent" name="rent" data-money placeholder="0"></div>
+                <span class="hint">Total rent received in the year.</span>
+              </div>
+              <div class="field">
+                <label for="propExpenses">Allowable expenses</label>
+                <div class="input-wrap"><span class="affix">£</span><input id="propExpenses" name="pex" data-money placeholder="0"></div>
+                <span class="hint">Letting fees, repairs, insurance, ground rent. Not mortgage interest.</span>
+              </div>
+            </div>
+            <div class="field">
+              <label for="financeCosts">Mortgage interest and finance costs</label>
+              <div class="input-wrap"><span class="affix">£</span><input id="financeCosts" name="fc" data-money placeholder="0"></div>
+              <span class="hint">Interest only, not capital repayments. Since 2020 this is not deducted from rent; you get a 20% tax credit on it instead.</span>
+            </div>
+            <div class="field">
+              <span class="label">Deduct from rent</span>
+              <div class="segmented block" role="radiogroup" aria-label="Property deduction method">
+                <input type="radio" name="pded" id="pded-exp" value="expenses" checked><label for="pded-exp">Actual expenses</label>
+                <input type="radio" name="pded" id="pded-pa" value="property_allowance"><label for="pded-pa">£1,000 property allowance</label>
+              </div>
+              <span class="hint">The property allowance replaces expenses and the mortgage interest credit. Rent-a-Room relief for lodgers is not modelled.</span>
+            </div>
+          </div>
+        </details>
 
         <details class="section" id="sec-other">
           <summary><span>Other income<span class="sub">Savings interest, dividends, rental and other income</span></span></summary>
@@ -204,6 +240,19 @@
               <div class="input-wrap"><input id="children" name="ch" type="number" min="0" max="20" step="1" placeholder="0"></div>
               <span class="hint">Used for the High Income Child Benefit Charge if your income is over £60,000.</span>
             </div>
+            <label class="toggle">
+              <span><span class="label">Opted out of Child Benefit payments</span><span class="sub">Still registered, but not receiving the money (so no charge)</span></span>
+              <input type="checkbox" id="cbOptOut" name="cbo" value="1"><span class="switch"></span>
+            </label>
+          </div>
+        </details>
+
+        <details class="section" id="sec-rates">
+          <summary><span>Customise tax rates and thresholds<span class="sub">Test a Budget change or your own scenario</span></span></summary>
+          <div class="body stack">
+            <p class="muted small">These start as the official GOV.UK figures for the selected tax year. Change any of them to see the effect. Changed figures are highlighted and included in the page address when you share it.</p>
+            <div id="rates-editor" class="rates-editor"></div>
+            <div><button type="button" class="btn" id="rates-reset">Reset to official figures</button></div>
           </div>
         </details>
 
@@ -219,6 +268,7 @@
   <div class="mobile-summary" id="mobile-summary" hidden>
     <div><div class="k">Take-home per month</div><div class="v" id="ms-month">£0</div></div>
     <div style="text-align:right"><div class="k">Per year</div><div class="v" id="ms-year">£0</div></div>
+    <a href="#results">See breakdown ↓</a>
   </div>
 
   <footer class="site-footer">

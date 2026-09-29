@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { calculate, marginalRate } from '../assets/js/tax-engine.js';
+import { calculate, marginalRate, applyOverrides } from '../assets/js/tax-engine.js';
 
 const y2627 = JSON.parse(readFileSync(new URL('../data/tax-years/2026-27.json', import.meta.url)));
 const y2526 = JSON.parse(readFileSync(new URL('../data/tax-years/2025-26.json', import.meta.url)));
@@ -198,4 +198,53 @@ test('marginal rate around £100k reflects the personal allowance taper (60%+)',
   close(m.rate, 0.62);
   const b = marginalRate({ employment: { salary: 30000 } }, y2627);
   close(b.rate, 0.28);
+});
+
+test('employment expenses reduce tax but not NI', () => {
+  const r = calculate({ employment: { salary: 30000, expenses: 1000 } }, y2627);
+  close(r.incomeTax.total, (29000 - 12570) * 0.2);
+  close(r.nationalInsurance.class1.total, (30000 - 12570) * 0.08);
+});
+
+test('property income: finance costs not deductible, 20% tax reducer (gov.uk style example)', () => {
+  // Salary 40,000; rent 12,000; expenses 2,000; mortgage interest 4,000
+  const r = calculate({ employment: { salary: 40000 }, property: { rentalIncome: 12000, expenses: 2000, financeCosts: 4000, deduction: 'expenses' } }, y2627);
+  close(r.income.property.profit, 10000);
+  const before = (37700) * 0.2 + (50000 - 12570 - 37700) * 0.4; // 7540 + (-270)? no: taxable 37,430 -> all basic
+  close(r.incomeTax.beforeReducers, 37430 * 0.2);
+  close(r.incomeTax.financeCostReducer, 800);
+  close(r.incomeTax.total, 37430 * 0.2 - 800);
+  assert.equal(r.nationalInsurance.class4.total, 0); // no NI on rent
+});
+
+test('property income: reducer capped at property profits', () => {
+  const r = calculate({ employment: { salary: 40000 }, property: { rentalIncome: 6000, expenses: 1000, financeCosts: 8000, deduction: 'expenses' } }, y2627);
+  close(r.incomeTax.financeCostReliefBase, 5000);
+  close(r.incomeTax.financeCostReducer, 1000);
+});
+
+test('property allowance replaces expenses and blocks finance cost relief', () => {
+  const r = calculate({ employment: { salary: 30000 }, property: { rentalIncome: 5000, expenses: 200, financeCosts: 1000, deduction: 'property_allowance' } }, y2627);
+  close(r.income.property.profit, 4000);
+  assert.equal(r.incomeTax.financeCostReducer, 0);
+  assert.ok(r.warnings.some((w) => /property allowance/.test(w)));
+});
+
+test('child benefit: opted out means no charge and nothing received', () => {
+  const r = calculate({ employment: { salary: 70000 }, adjustments: { childBenefitChildren: 2, childBenefitOptedOut: true } }, y2627);
+  assert.equal(r.hicbc.charge, 0);
+  assert.equal(r.hicbc.received, 0);
+  assert.ok(r.warnings.length === 1);
+  const kept = calculate({ employment: { salary: 70000 }, adjustments: { childBenefitChildren: 2 } }, y2627);
+  close(kept.hicbc.netKept, kept.hicbc.received - kept.hicbc.charge);
+  close(kept.totals.takeHome, calculate({ employment: { salary: 70000 } }, y2627).totals.takeHome + kept.hicbc.netKept);
+});
+
+test('rate overrides change the calculation', () => {
+  const custom = applyOverrides(y2627, { 'incomeTax.personalAllowance': '15000', 'incomeTax.bands.ruk.0.rate': '0.19', 'nationalInsurance.class1.employeeMainRate': 0.1 });
+  const r = calculate({ employment: { salary: 30000 } }, custom);
+  close(r.incomeTax.total, 15000 * 0.19);
+  close(r.nationalInsurance.class1.total, (30000 - 12570) * 0.1);
+  // original untouched
+  assert.equal(y2627.incomeTax.personalAllowance, 12570);
 });

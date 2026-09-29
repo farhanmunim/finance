@@ -167,3 +167,106 @@ export function compare(options) {
 }
 
 export const _internal = { num, round2 };
+
+/** Planned overpayment for a given month, from the same options amortise() uses. */
+function plannedOverpayment(o, m) {
+  const lumpMonth = Math.max(1, Math.round(num(o.lumpSumMonth) || 1));
+  return num(o.monthlyOverpayment) + (m % 12 === 0 ? num(o.annualOverpayment) : 0) + (m === lumpMonth ? num(o.lumpSum) : 0);
+}
+
+/**
+ * Overpay the mortgage, or put the same money in savings?
+ * Both strategies spend exactly the same cash each month (standard payment + planned overpayment).
+ *  A: overpay the mortgage; once it is cleared (or the payment falls) the freed cash goes into savings.
+ *  B: pay the mortgage as normal; the overpayment money goes into savings every month.
+ * Compared at the end of the standard mortgage term on "net position" = savings − mortgage balance.
+ * @param {object} options amortise() options including overpayments
+ * @param {number} savingsRate gross savings rate (%)
+ * @param {number} taxRate tax on the interest (0, 0.2, 0.4, 0.45)
+ */
+export function overpayVsSave(options, savingsRate, taxRate = 0) {
+  const base = amortise({ ...options, monthlyOverpayment: 0, annualOverpayment: 0, lumpSum: 0 });
+  const over = amortise(options);
+  if (!base.ok || !over.ok) return null;
+  const horizon = base.months;
+  const rm = (num(savingsRate) * (1 - taxRate)) / 100 / 12;
+  let savA = 0, savB = 0, depositsA = 0, depositsB = 0;
+  const yearly = [];
+  for (let m = 1; m <= horizon; m++) {
+    const b = base.schedule[m - 1];
+    const a = over.schedule[m - 1];
+    const outflow = b.payment + plannedOverpayment(options, m);
+    const cashA = a ? a.payment + a.overpayment : 0;
+    savA = savA * (1 + rm) + Math.max(0, outflow - cashA);
+    depositsA += Math.max(0, outflow - cashA);
+    savB = savB * (1 + rm) + Math.max(0, outflow - b.payment);
+    depositsB += Math.max(0, outflow - b.payment);
+    if (m % 12 === 0 || m === horizon) {
+      const balA = a ? a.closing : 0;
+      yearly.push({ year: Math.ceil(m / 12), savingsA: round2(savA), balanceA: balA, netA: round2(savA - balA), savingsB: round2(savB), balanceB: b.closing, netB: round2(savB - b.closing) });
+    }
+  }
+  const last = yearly[yearly.length - 1];
+  return {
+    horizonMonths: horizon,
+    netRate: round2(num(savingsRate) * (1 - taxRate) * 100) / 100,
+    overpay: { savings: last.savingsA, balance: last.balanceA, net: last.netA, interestPaid: over.totalInterest, deposits: round2(depositsA), interestEarned: round2(savA - depositsA) },
+    save: { savings: last.savingsB, balance: last.balanceB, net: last.netB, interestPaid: base.totalInterest, deposits: round2(depositsB), interestEarned: round2(savB - depositsB) },
+    advantage: round2(last.netA - last.netB), // positive = overpaying wins
+    yearly,
+  };
+}
+
+/** Gross savings rate at which saving and overpaying come out equal (bisection). */
+export function breakEvenSavingsRate(options, taxRate = 0) {
+  let lo = 0, hi = 40;
+  const f = (r) => overpayVsSave(options, r, taxRate)?.advantage ?? 0;
+  if (f(lo) <= 0) return 0;
+  if (f(hi) >= 0) return null;
+  for (let i = 0; i < 40; i++) { const mid = (lo + hi) / 2; if (f(mid) > 0) lo = mid; else hi = mid; }
+  return Math.round(((lo + hi) / 2) * 100) / 100;
+}
+
+/** Monthly payment and total interest at a range of interest rates around the entered one. */
+export function rateSensitivity(options, deltas = [-2, -1, -0.5, 0, 0.5, 1, 2, 3]) {
+  const rate = num(options.annualRate);
+  return deltas.map((d) => {
+    const r = Math.max(0, Math.round((rate + d) * 100) / 100);
+    const revert = options.revertRate == null ? null : Math.max(0, num(options.revertRate) + d);
+    const run = amortise({ ...options, annualRate: r, revertRate: revert, monthlyOverpayment: 0, annualOverpayment: 0, lumpSum: 0 });
+    return { delta: d, rate: r, payment: run.ok ? run.initialPayment : null, totalInterest: run.ok ? run.totalInterest : null, current: d === 0 };
+  });
+}
+
+/** Common lender LTV tiers and the extra deposit needed to reach each one. */
+export function ltvBands(price, principal, tiers = [0.95, 0.9, 0.85, 0.8, 0.75, 0.6]) {
+  if (!(price > 0)) return [];
+  const ltv = principal / price;
+  return tiers.map((t) => ({ tier: t, maxLoan: round2(price * t), extraDeposit: round2(Math.max(0, principal - price * t)), reached: ltv <= t + 1e-9 }));
+}
+
+/**
+ * Buy-to-let: UK residential landlords cannot deduct mortgage interest. They get a tax
+ * reduction of reliefRate (20%) × the lower of finance costs and property profits instead.
+ * @param {object} p { annualRent, annualExpenses, annualInterest, annualMortgagePayments, taxRate, reliefRate, price }
+ */
+export function buyToLet(p) {
+  const rent = num(p.annualRent), expenses = num(p.annualExpenses), interest = num(p.annualInterest), payments = num(p.annualMortgagePayments);
+  const taxRate = num(p.taxRate), reliefRate = p.reliefRate == null ? 0.2 : num(p.reliefRate);
+  const profit = Math.max(0, rent - expenses);
+  const taxBeforeCredit = profit * taxRate;
+  const creditBase = Math.min(interest, profit);
+  const credit = Math.min(taxBeforeCredit, creditBase * reliefRate);
+  const tax = taxBeforeCredit - credit;
+  const cashBeforeTax = rent - expenses - payments;
+  const oldRulesTax = Math.max(0, rent - expenses - interest) * taxRate; // pre-2020 for comparison
+  return {
+    rent, expenses, interest, payments, profit: round2(profit), taxRate, reliefRate,
+    taxBeforeCredit: round2(taxBeforeCredit), creditBase: round2(creditBase), credit: round2(credit), tax: round2(tax),
+    cashBeforeTax: round2(cashBeforeTax), cashAfterTax: round2(cashBeforeTax - tax),
+    oldRulesTax: round2(oldRulesTax), extraTaxVsOldRules: round2(tax - oldRulesTax),
+    grossYield: p.price > 0 ? rent / num(p.price) : null,
+    netYield: p.price > 0 ? (cashBeforeTax - tax + (payments - interest)) / num(p.price) : null, // capital repaid is not a cost
+    effectiveTaxRate: profit > 0 ? tax / Math.max(1e-9, rent - expenses - interest) : null,
+  };
+}

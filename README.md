@@ -4,8 +4,8 @@ Two small, fast calculators built with plain HTML, CSS and JavaScript. No framew
 
 | Tool | Path | What it does |
 | --- | --- | --- |
-| Take-home pay | `/income/` | Income tax, National Insurance, student loan and pension deductions for employees, the self-employed, or both, with every step shown. |
-| Mortgage | `/mortgage/` | Monthly payment, total interest, fixed-rate periods, interest-only, and what overpayments save. |
+| Take-home pay | `/income/` | Income tax, National Insurance, student loan and pension deductions for employees, the self-employed, or both, plus property income, Child Benefit and every rate editable, with each step shown. |
+| Mortgage | `/mortgage/` | Monthly payment, total interest, fixed-rate periods, interest-only, overpayments, overpay-vs-save break-even, rate sensitivity, LTV tiers and buy-to-let tax. |
 
 ## Deploying to Cloudflare Pages
 
@@ -51,13 +51,26 @@ Implemented in `assets/js/tax-engine.js` (pure functions, unit-tested in `tests/
 4. **Income tax.** Non-savings income through the rUK or Scottish bands. Savings then dividends are stacked on top using UK-wide bands: starting rate for savings (£5,000 reduced by non-savings income over the allowance), Personal Savings Allowance by taxpayer level, dividend allowance, dividend rates. Relief-at-source pension and Gift Aid extend the band limits.
 5. **National Insurance.** Class 1 employee contributions on an annual basis; employer contributions shown for information. Class 4 on profits, with the statutory annual-maximum interaction when someone also pays Class 1 (main-rate Class 4 is reduced by Class 1 already paid; displaced profits are charged at the upper rate). Class 2 is credited above the small profits threshold; voluntary contributions are shown but not deducted.
 6. **Student loans.** 9% (Plan 1/2/4/5) over the lowest threshold of the selected plans and 6% (Postgraduate) over its threshold, on employment pay plus profits, plus unearned income when it exceeds £2,000.
-7. **High Income Child Benefit Charge.** 1% of Child Benefit per £200 of adjusted net income over £60,000, all of it from £80,000.
+7. **Property income.** Rent less allowable expenses (or the £1,000 property allowance). Mortgage interest and other finance costs are not deductible; a tax reducer of 20% × the lower of finance costs, property profits and non-savings income after allowances is given instead (ITTOIA 2005 s272A). Not available with the property allowance.
+8. **High Income Child Benefit Charge.** 1% of Child Benefit per £200 of adjusted net income over £60,000, all of it from £80,000. Child Benefit received is shown as tax-free income and the charge deducted; opting out of payments removes both.
+9. **Allowable employment expenses** reduce taxable pay but not NI.
+
+### Custom rates
+
+"Customise tax rates and thresholds" in the form exposes every figure in the tax-year file (allowances, each band's rate and limit for the selected region, savings and dividend rules, NI thresholds and rates, student loan plans, Child Benefit). Edits are applied as overrides on top of the official file (`applyOverrides` in the engine), highlighted in the form, encoded in the shareable URL (`ov` parameter) and flagged in the results.
 
 Known simplifications: annual (not per-pay-period) NI and student loan calculation, no loss relief, no pension annual allowance or tapered annual allowance checks, no Married Couple's Allowance, no capital gains.
 
 ## Calculation method (mortgage tool)
 
 Implemented in `assets/js/mortgage-engine.js`. Interest accrues monthly at one twelfth of the annual rate on the opening balance; the standard payment is the annuity amount that clears the balance over the term and is recalculated when the rate changes (initial deal → revert rate). Overpayments reduce the balance immediately and either shorten the term or reduce the payment. Interest-only runs to the end of the term and reports the outstanding balance. A user-entered payment derives the payoff time instead.
+
+Analysis on top of the schedule:
+
+- **Overpay or save?** Both strategies spend identical cash each month (standard payment plus planned overpayment). Strategy A overpays, and once the mortgage is cleared the freed payments go into savings; strategy B pays the mortgage as normal and saves the overpayment money at the entered rate net of tax, compounding monthly. Net position (savings − balance) is compared at the end of the original term and the break-even gross savings rate is found by bisection.
+- **Rate sensitivity.** Monthly payment and total interest at −2 to +3 percentage points.
+- **Loan-to-value tiers.** Extra deposit needed to reach 95/90/85/80/75/60% LTV.
+- **Buy-to-let.** Rental profit taxed at the chosen marginal rate with the finance-cost restriction (20% credit on the lower of interest and profit), cash after mortgage and tax, gross yield, and the extra tax versus full deductibility.
 
 ## Project layout
 

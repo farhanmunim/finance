@@ -1,7 +1,7 @@
-import { calculate, marginalRate } from './tax-engine.js';
+import { calculate, marginalRate, applyOverrides } from './tax-engine.js';
 import { fmt, parseNum, initMoneyInputs, $, $$, el, linesTable, urlState, debounce, loadJSON } from './ui.js';
 
-const state = { index: null, rates: {}, period: 'year' };
+const state = { index: null, rates: {}, period: 'year', overrides: {}, editorKey: '' };
 const form = $('#form');
 const results = $('#results');
 
@@ -23,6 +23,7 @@ async function init() {
   bindEvents();
   await ensureRates(sel.value);
   syncVisibility();
+  buildRatesEditor();
   render();
 }
 
@@ -35,12 +36,15 @@ async function ensureRates(id) {
 
 function bindEvents() {
   const rerender = debounce(() => { syncVisibility(); render(); }, 80);
-  form.addEventListener('input', rerender);
+  form.addEventListener('input', (e) => { if (e.target.closest('#rates-editor')) return; rerender(); });
   form.addEventListener('change', async (e) => {
+    if (e.target.closest('#rates-editor')) return;
     if (e.target.id === 'taxYear') { results.setAttribute('aria-busy', 'true'); await ensureRates(e.target.value); results.removeAttribute('aria-busy'); }
-    syncVisibility(); render();
+    syncVisibility(); buildRatesEditor(); render();
   });
   form.addEventListener('submit', (e) => e.preventDefault());
+  $('#rates-editor').addEventListener('input', debounce(onRateEdit, 120));
+  $('#rates-reset').addEventListener('click', () => { state.overrides = {}; buildRatesEditor(true); render(); });
 }
 
 function syncVisibility() {
@@ -62,22 +66,25 @@ function readForm() {
   const mode = f.mode.value;
   const raw = {
     y: f.y.value, r: f.r.value, mode,
-    sal: f.sal.value, bon: f.bon.value, pm: f.pm.value, pv: f.pv.value, pt: f.pt.value, ben: f.ben.value,
+    sal: f.sal.value, bon: f.bon.value, pm: f.pm.value, pv: f.pv.value, pt: f.pt.value, ben: f.ben.value, eex: f.eex.value,
     to: f.to.value, ex: f.ex.value, ded: f.ded.value, sep: f.sep.value,
+    rent: f.rent.value, pex: f.pex.value, fc: f.fc.value, pded: f.pded.value,
     sav: f.sav.value, div: f.div.value, oth: f.oth.value,
     sl: $$('input[name="sl"]:checked', f).map((c) => c.value).join(','),
-    ga: f.ga.value, ma: f.ma.value, bpa: f.bpa.checked ? '1' : '', ch: f.ch.value, p: state.period === 'year' ? '' : state.period,
+    ga: f.ga.value, ma: f.ma.value, bpa: f.bpa.checked ? '1' : '', ch: f.ch.value, cbo: f.cbo.checked ? '1' : '', p: state.period === 'year' ? '' : state.period,
+    ov: Object.keys(state.overrides).length ? JSON.stringify(state.overrides) : '',
   };
   const input = {
     region: raw.r,
     employment: mode === 'self' ? {} : {
-      salary: parseNum(raw.sal), bonus: parseNum(raw.bon), taxableBenefits: parseNum(raw.ben),
+      salary: parseNum(raw.sal), bonus: parseNum(raw.bon), taxableBenefits: parseNum(raw.ben), expenses: parseNum(raw.eex),
       pension: { method: raw.pm, type: raw.pt, value: parseNum(raw.pv) },
     },
     selfEmployment: mode === 'employed' ? {} : { turnover: parseNum(raw.to), expenses: parseNum(raw.ex), deduction: raw.ded, pensionPaid: parseNum(raw.sep) },
+    property: { rentalIncome: parseNum(raw.rent), expenses: parseNum(raw.pex), financeCosts: parseNum(raw.fc), deduction: raw.pded },
     other: { savingsInterest: parseNum(raw.sav), dividends: parseNum(raw.div), otherIncome: parseNum(raw.oth) },
     studentLoans: raw.sl ? raw.sl.split(',') : [],
-    adjustments: { giftAid: parseNum(raw.ga), marriageAllowance: raw.ma, blindPersonsAllowance: !!raw.bpa, childBenefitChildren: parseNum(raw.ch) },
+    adjustments: { giftAid: parseNum(raw.ga), marriageAllowance: raw.ma, blindPersonsAllowance: !!raw.bpa, childBenefitChildren: parseNum(raw.ch), childBenefitOptedOut: !!raw.cbo },
   };
   return { raw, input };
 }
@@ -89,7 +96,12 @@ function restoreFromUrl() {
   if (q.y && state.index.years.some((y) => y.id === q.y)) f.y.value = q.y;
   if (q.r) setRadio('r', q.r);
   if (q.mode) setRadio('mode', q.mode);
-  for (const k of ['sal', 'bon', 'pv', 'ben', 'to', 'ex', 'sep', 'sav', 'div', 'oth', 'ga', 'ch']) if (q[k] != null && f[k]) f[k].value = q[k];
+  for (const k of ['sal', 'bon', 'pv', 'ben', 'eex', 'to', 'ex', 'sep', 'rent', 'pex', 'fc', 'sav', 'div', 'oth', 'ga', 'ch']) if (q[k] != null && f[k]) f[k].value = q[k];
+  if (q.pded) setRadio('pded', q.pded);
+  if (q.cbo) f.cbo.checked = true;
+  if (q.ov) { try { const o = JSON.parse(q.ov); if (o && typeof o === 'object') state.overrides = o; } catch { /* ignore bad overrides */ } }
+  if (q.rent || q.pex || q.fc) $('#sec-property').open = true;
+  if (Object.keys(state.overrides).length) $('#sec-rates').open = true;
   if (q.pm) f.pm.value = q.pm;
   if (q.pt) setRadio('pt', q.pt);
   if (q.ded) setRadio('ded', q.ded);
@@ -98,15 +110,17 @@ function restoreFromUrl() {
   if (q.sl) for (const p of q.sl.split(',')) { const c = $(`input[name="sl"][value="${p}"]`, f); if (c) c.checked = true; }
   if (q.p && ['month', 'week'].includes(q.p)) state.period = q.p;
   if (q.sav || q.div || q.oth) $('#sec-other').open = true;
-  if (q.ga || q.ma || q.bpa || q.ch) $('#sec-adjust').open = true;
+  if (q.ga || q.ma || q.bpa || q.ch || q.cbo) $('#sec-adjust').open = true;
 }
 
 // ------------------------------------------------------------------ render
 function render() {
   const { raw, input } = readForm();
-  const rates = state.rates[raw.y];
-  if (!rates) return;
+  const base = state.rates[raw.y];
+  if (!base) return;
   urlState.write(raw);
+  const rates = applyOverrides(base, state.overrides);
+  state.effective = rates;
   const r = calculate(input, rates);
   const m = marginalRate(input, rates);
   results.innerHTML = '';
@@ -114,7 +128,7 @@ function render() {
   results.append(incomeCard(r, rates), allowancesCard(r, rates), incomeTaxCard(r, rates), niCard(r, rates));
   if (r.studentLoans.plans.length) results.append(studentLoanCard(r, rates));
   if (r.hicbc) results.append(hicbcCard(r, rates));
-  results.append(sourcesCard(rates));
+  results.append(sourcesCard(base));
   $('#ms-month').textContent = fmt.gbp(r.totals.takeHomeMonthly);
   $('#ms-year').textContent = fmt.gbp(r.totals.takeHome);
   $('#mobile-summary').hidden = r.totals.cashIncome <= 0;
@@ -144,7 +158,7 @@ function heroCard(r, rates) {
   const t = r.totals;
   const card = el('div', { class: 'card' });
   card.append(el('div', { class: 'card-header' }, [
-    el('div', {}, [el('h2', { text: 'Your take-home pay' }), el('p', { text: `Tax year ${rates.label}${r.region === 'scotland' ? ' · Scottish rates' : ''}` })]),
+    el('div', {}, [el('h2', { text: 'Your take-home pay' }), el('p', {}, [`Tax year ${rates.label}${r.region === 'scotland' ? ' · Scottish rates' : ''} `, Object.keys(state.overrides).length ? el('span', { class: 'badge', text: `Custom rates (${Object.keys(state.overrides).length} changed)` }) : null])]),
     periodSwitch(),
   ]));
   if (t.cashIncome <= 0) {
@@ -193,7 +207,9 @@ function summaryCard(r, m, rates) {
     ['Income tax', '− ' + money(t.incomeTax), { neg: true }],
     ['National Insurance', '− ' + money(t.nationalInsurance), { neg: true }],
     t.studentLoans > 0 ? ['Student loan repayments', '− ' + money(t.studentLoans), { neg: true }] : null,
+    t.financeCosts > 0 ? ['Mortgage interest on let property', '− ' + money(t.financeCosts), { neg: true, note: 'Paid from rent but not deductible for tax - see Step 3 for the 20% credit.' }] : null,
     t.hicbc > 0 ? ['High Income Child Benefit Charge', '− ' + money(t.hicbc), { neg: true }] : null,
+    t.childBenefitReceived > 0 ? ['Child Benefit received (tax-free)', '+ ' + money(t.childBenefitReceived)] : null,
     r.income.employment.taxableBenefits > 0 ? ['Benefits in kind (not cash)', '− ' + money(r.income.employment.taxableBenefits), { neg: true }] : null,
     ['Take-home pay', money(t.takeHome), { total: true }],
   ];
@@ -229,6 +245,7 @@ function incomeCard(r, rates) {
       rows.push(['Pension (relief at source)', money(e.pensionGross), { sub: true, note: `You pay ${money(e.pensionCash)}; the provider claims ${money(e.pensionGross - e.pensionCash)} basic-rate relief. Does not reduce taxable pay but extends your basic-rate band (Step 3).` }]);
     }
     if (e.taxableBenefits > 0) rows.push(['Taxable benefits in kind', money(e.taxableBenefits)]);
+    if (e.expenses > 0) rows.push(['Allowable work expenses', '− ' + money(e.expenses), { neg: true, sub: true }]);
     rows.push(['Taxable employment income', money(e.taxableIncome), { total: true }]);
   }
   if (s.turnover > 0) {
@@ -238,11 +255,21 @@ function incomeCard(r, rates) {
     rows.push(['Taxable profit', money(s.profit), { total: true }]);
     if (s.pensionGross > 0) rows.push(['Personal pension (relief at source)', money(s.pensionGross), { sub: true, note: `You pay ${money(s.pensionPaid)}; the provider adds ${money(s.pensionGross - s.pensionPaid)}. Extends your basic-rate band (Step 3).` }]);
   }
+  const pr = i.property;
+  if (pr.rentalIncome > 0) {
+    rows.push(['Rental income', money(pr.rentalIncome)]);
+    if (pr.deduction === 'property_allowance') rows.push(['Property allowance', '− ' + money(pr.propertyAllowanceUsed), { neg: true, sub: true }]);
+    else if (pr.expensesUsed > 0) rows.push(['Allowable property expenses', '− ' + money(pr.expensesUsed), { neg: true, sub: true }]);
+    rows.push(['Taxable property profit', money(pr.profit), { total: true, note: pr.financeCosts > 0 ? `Mortgage interest of ${money(pr.financeCosts)} is not deducted here; a 20% tax credit is given in Step 3 instead.` : null }]);
+  }
   if (i.savings > 0) rows.push(['Savings interest', money(i.savings)]);
   if (i.dividends > 0) rows.push(['Dividends', money(i.dividends)]);
   if (i.otherIncome > 0) rows.push(['Other income', money(i.otherIncome)]);
   rows.push(['Total income for tax', money(i.total), { total: true }]);
   card.append(linesTable(rows));
+  if (pr.rentalIncome > 0) card.append(explain('How landlords are taxed', [
+    el('p', { text: 'Rental profit is rent less allowable running costs. Since April 2020 residential landlords cannot deduct mortgage interest or other finance costs. Instead the tax bill is reduced by 20% of the finance costs (limited to the lower of the finance costs, the property profit and your total non-savings income after allowances). Higher-rate taxpayers therefore pay more than under the old rules. There is no National Insurance on rental income.' }),
+  ]));
   card.append(explain('How pensions affect this', [
     el('ul', {}, [
       el('li', { html: '<b>Salary sacrifice:</b> you give up pay and your employer pays it into your pension. It never counts as income, so you save income tax <i>and</i> National Insurance on it.' }),
@@ -294,9 +321,10 @@ function incomeTaxCard(r, rates) {
   if (it.savings.pieces.length) { rows.push([el('b', { text: 'Savings interest' }), '', { mid: '' }]); rows.push(...pieceRows(it.savings.pieces)); }
   if (it.dividends.pieces.length) { rows.push([el('b', { text: 'Dividends' }), '', { mid: '' }]); rows.push(...pieceRows(it.dividends.pieces)); }
   if (it.marriageReducer > 0) rows.push(['Marriage Allowance tax reduction', '− ' + money(it.marriageReducer), { neg: true, mid: '' }]);
+  if (it.financeCostReducer > 0) rows.push([`Mortgage interest tax credit (${fmt.pct(it.financeCostReliefRate, 0)} of ${money(it.financeCostReliefBase)})`, '− ' + money(it.financeCostReducer), { neg: true, mid: '', note: it.financeCostReliefBase < r.income.property.financeCosts ? 'Limited to your property profit; the unused amount carries forward to future years.' : null }]);
   rows.push(['Total income tax', money(it.total), { total: true, mid: money(r.allowances.taxable.total) }]);
   if (!rows.length) rows.push(['No income tax due', money(0), { mid: '' }]);
-  card.append(linesTable(rows, { header: ['Band', 'Amount', 'Tax'] }));
+  card.append(el('div', { class: 'table-scroll' }, linesTable(rows, { header: ['Band', 'Amount', 'Tax'] })));
 
   const bandsText = it.bands.map((b) => `${b.name} ${fmt.pct(b.rate, 0)}: ${b.from === 0 ? 'up to' : fmt.gbp(b.from + 1) + ' to'} ${b.to == null ? 'no limit' : fmt.gbp(b.to)}`).join(' · ');
   const notes = [el('p', { html: `<b>Bands of taxable income (after allowances):</b> ${bandsText}.` })];
@@ -326,7 +354,7 @@ function niCard(r, rates) {
     rows.push(['Class 2', money(0), { mid: '', note: c2.status === 'credited' ? `Profits are above ${fmt.gbp(c2.smallProfitsThreshold)}, so you get NI credits for free.` : `Profits are below ${fmt.gbp(c2.smallProfitsThreshold)}. You can pay voluntary Class 2 (${fmt.gbp(c2.weeklyRate, 2)} a week, ${fmt.gbp(c2.voluntaryAnnual)} a year) to protect your State Pension record - not included here.` }]);
   }
   rows.push(['Total National Insurance', money(ni.total), { total: true, mid: '' }]);
-  card.append(linesTable(rows, { header: ['', 'Amount', 'NI'] }));
+  card.append(el('div', { class: 'table-scroll' }, linesTable(rows, { header: ['', 'Amount', 'NI'] })));
   const notes = [];
   if (r.income.employment.grossPay > 0) notes.push(el('p', { html: `Employee NI is worked out here on an annual basis. Through payroll it is calculated each pay period, so if your pay is uneven (for example a big bonus month) the real total can differ slightly. Your employer separately pays ${fmt.pct(c1.employerRate, 0)} on your earnings above ${fmt.gbp(c1.secondaryThreshold)} (${money(c1.employer)}), which does not come out of your pay.` }));
   if (r.income.selfEmployment.profit > 0) notes.push(el('p', { style: 'margin-top:8px', html: `Class 4 is charged on profits and paid with your Self Assessment bill. Since April 2024 nobody has to pay Class 2 - if your profits are over the small profits threshold you get the credits automatically.` }));
@@ -356,16 +384,19 @@ function hicbcCard(r, rates) {
   const card = el('div', { class: 'card' });
   card.append(el('div', { class: 'card-header' }, [el('div', {}, [el('h2', { text: 'High Income Child Benefit Charge' }), el('p', { text: `Applies when adjusted net income is over ${fmt.gbp(h.threshold)}.` })])]));
   card.append(linesTable([
-    [`Child Benefit for ${h.children} ${h.children === 1 ? 'child' : 'children'}`, money(h.childBenefitAnnual)],
+    [`Child Benefit for ${h.children} ${h.children === 1 ? 'child' : 'children'}`, money(h.childBenefitAnnual), { note: h.optedOut ? 'You have opted out of payments, so nothing is received and no charge applies.' : 'Not taxable income, but clawed back through the charge below if your income is high.' }],
     ['Your adjusted net income', money(r.allowances.adjustedNetIncome)],
-    [`Charge: ${h.percent}% of Child Benefit`, money(h.charge), { total: true, note: h.percent === 0 ? 'No charge - your income is under the threshold.' : `1% for every ${fmt.gbp(rates.childBenefit.hicbc.stepPounds)} over ${fmt.gbp(h.threshold)}, all of it from ${fmt.gbp(h.fullWithdrawal)}.` }],
+    [`Charge: ${h.percent}% of Child Benefit`, '− ' + money(h.charge), { neg: true, note: h.percent === 0 ? 'No charge - your income is under the threshold.' : `1% for every ${fmt.gbp(rates.childBenefit.hicbc.stepPounds)} over ${fmt.gbp(h.threshold)}, all of it from ${fmt.gbp(h.fullWithdrawal)}.` }],
+    ['Child Benefit you keep', money(h.netKept), { total: true }],
   ]));
-  card.append(explain('Can I avoid this?', [el('p', { text: 'The charge is based on the higher earner in the household and on adjusted net income, so pension contributions and Gift Aid reduce it. Some families choose to opt out of receiving the payments while still claiming, to keep National Insurance credits. The charge is normally collected through Self Assessment or PAYE.' })]));
+  card.append(explain('Can I avoid this?', [el('p', { text: 'The charge is based on the higher earner in the household and on adjusted net income, so pension contributions and Gift Aid reduce it. Unless your income is over the full-withdrawal point it is usually better to keep receiving the payments and pay the charge. Families who do opt out should still register the claim to protect National Insurance credits. The charge is normally collected through Self Assessment or PAYE.' })]));
   return card;
 }
 
 function sourcesCard(rates) {
   const card = el('div', { class: 'card' });
+  const n = Object.keys(state.overrides).length;
+  if (n) card.append(el('div', { class: 'note-box warn', style: 'margin-bottom:14px' }, [el('p', { html: `<b>${n} figure${n === 1 ? '' : 's'} changed from the official values.</b> The results above use your custom rates, not the GOV.UK ones listed below.` }), el('p', {}, el('button', { type: 'button', class: 'btn', style: 'margin-top:8px', text: 'Reset to official figures', onclick: () => { state.overrides = {}; buildRatesEditor(true); render(); } }))]));
   card.append(el('div', { class: 'card-header' }, [el('div', {}, [el('h2', { text: 'Assumptions and sources' }), el('p', { text: `Rates for ${rates.label} verified against GOV.UK on ${new Date(rates.verified).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}.` })])]));
   card.append(el('ul', { class: 'small', style: 'margin:0 0 14px; padding-left:18px; color:var(--text-2)' }, [
     el('li', { text: 'You are UK resident with a standard tax code, and the figures cover a full tax year.' }),
@@ -376,6 +407,101 @@ function sourcesCard(rates) {
   card.append(el('h3', { text: 'Official sources', style: 'margin-bottom:8px' }));
   card.append(el('ul', { class: 'sources' }, rates.sources.map((s) => el('li', {}, [el('a', { href: s.url, target: '_blank', rel: 'noopener', text: s.title }), el('span', { text: s.covers.join(' · ') })]))));
   return card;
+}
+
+// ------------------------------------------------------------------ custom rates editor
+function rateFields(base, region) {
+  const bands = base.incomeTax.bands[region];
+  const sl = base.studentLoans;
+  return [
+    { group: 'Allowances', fields: [
+      ['incomeTax.personalAllowance', 'Personal Allowance', 'money'],
+      ['incomeTax.personalAllowanceIncomeLimit', 'Allowance taper starts at', 'money'],
+      ['incomeTax.blindPersonsAllowance', "Blind Person's Allowance", 'money'],
+      ['incomeTax.marriageAllowanceTransfer', 'Marriage Allowance transfer', 'money'],
+      ['incomeTax.tradingAllowance', 'Trading allowance', 'money'],
+      ['incomeTax.propertyAllowance', 'Property allowance', 'money'],
+    ] },
+    { group: region === 'scotland' ? 'Scottish income tax bands (taxable income after allowances)' : 'Income tax bands (taxable income after allowances)', fields: bands.flatMap((b, i) => [
+      [`incomeTax.bands.${region}.${i}.rate`, `${b.name}`, 'pct'],
+      [`incomeTax.bands.${region}.${i}.upTo`, `${b.name} up to`, 'money', b.upTo == null],
+    ]) },
+    { group: 'Savings and dividends', fields: [
+      ['incomeTax.savings.startingRateBand', 'Starting rate for savings band', 'money'],
+      ['incomeTax.savings.personalSavingsAllowance.basic', 'Savings allowance (basic rate)', 'money'],
+      ['incomeTax.savings.personalSavingsAllowance.higher', 'Savings allowance (higher rate)', 'money'],
+      ['incomeTax.savings.personalSavingsAllowance.additional', 'Savings allowance (additional)', 'money'],
+      ['incomeTax.dividends.allowance', 'Dividend allowance', 'money'],
+      ['incomeTax.dividends.rates.basic', 'Dividend basic rate', 'pct'],
+      ['incomeTax.dividends.rates.higher', 'Dividend higher rate', 'pct'],
+      ['incomeTax.dividends.rates.additional', 'Dividend additional rate', 'pct'],
+      ['incomeTax.financeCostReliefRate', 'Landlord mortgage interest credit', 'pct'],
+    ] },
+    { group: 'National Insurance', fields: [
+      ['nationalInsurance.class1.primaryThreshold', 'Class 1 primary threshold', 'money'],
+      ['nationalInsurance.class1.upperEarningsLimit', 'Class 1 upper earnings limit', 'money'],
+      ['nationalInsurance.class1.employeeMainRate', 'Employee main rate', 'pct'],
+      ['nationalInsurance.class1.employeeUpperRate', 'Employee upper rate', 'pct'],
+      ['nationalInsurance.class1.secondaryThreshold', 'Employer secondary threshold', 'money'],
+      ['nationalInsurance.class1.employerRate', 'Employer rate', 'pct'],
+      ['nationalInsurance.class4.lowerProfitsLimit', 'Class 4 lower profits limit', 'money'],
+      ['nationalInsurance.class4.upperProfitsLimit', 'Class 4 upper profits limit', 'money'],
+      ['nationalInsurance.class4.mainRate', 'Class 4 main rate', 'pct'],
+      ['nationalInsurance.class4.upperRate', 'Class 4 upper rate', 'pct'],
+      ['nationalInsurance.class2.smallProfitsThreshold', 'Class 2 small profits threshold', 'money'],
+      ['nationalInsurance.class2.weeklyRate', 'Class 2 weekly rate', 'money2'],
+    ] },
+    { group: 'Student loans', fields: ['plan1', 'plan2', 'plan4', 'plan5', 'postgraduate'].flatMap((p) => [
+      [`studentLoans.${p}.threshold`, `${sl[p].name} threshold`, 'money'],
+      [`studentLoans.${p}.rate`, `${sl[p].name} rate`, 'pct'],
+    ]) },
+    { group: 'Child Benefit', fields: [
+      ['childBenefit.weeklyEldest', 'Weekly rate, eldest child', 'money2'],
+      ['childBenefit.weeklyOther', 'Weekly rate, other children', 'money2'],
+      ['childBenefit.hicbc.threshold', 'Charge starts at', 'money'],
+      ['childBenefit.hicbc.fullWithdrawal', 'Fully withdrawn at', 'money'],
+    ] },
+  ];
+}
+const getPath = (obj, path) => path.split('.').reduce((o, k) => (o == null ? undefined : o[k]), obj);
+const fmtRateValue = (v, type) => (v == null ? '' : type === 'pct' ? String(Math.round(v * 10000) / 100) : type === 'money2' ? v.toFixed(2) : String(v));
+
+function buildRatesEditor(force) {
+  const yearId = form.y.value, region = form.r.value;
+  const base = state.rates[yearId];
+  if (!base) return;
+  const key = `${yearId}|${region}`;
+  if (!force && state.editorKey === key) return;
+  state.editorKey = key;
+  const root = $('#rates-editor');
+  root.innerHTML = '';
+  for (const g of rateFields(base, region)) {
+    root.append(el('h3', { text: g.group }));
+    const grid = el('div', { class: 'rates-grid' });
+    for (const [path, label, type, noLimit] of g.fields) {
+      const baseVal = getPath(base, path);
+      const cur = state.overrides[path] != null ? Number(state.overrides[path]) : baseVal;
+      const id = 'rf-' + path.replace(/\W/g, '-');
+      const input = el('input', { id, type: 'text', inputmode: 'decimal', 'data-path': path, 'data-type': type, 'data-base': baseVal == null ? '' : String(baseVal), value: fmtRateValue(cur, type), disabled: !!noLimit, placeholder: noLimit ? 'No limit' : '' });
+      const wrap = el('div', { class: 'input-wrap' + (state.overrides[path] != null ? ' changed' : '') }, type === 'pct' ? [input, el('span', { class: 'affix suffix', text: '%' })] : [el('span', { class: 'affix', text: '£' }), input]);
+      grid.append(el('div', { class: 'field' }, [el('label', { for: id, text: label }), wrap]));
+    }
+    root.append(grid);
+  }
+}
+
+function onRateEdit(e) {
+  const input = e.target.closest('input[data-path]');
+  if (!input) return;
+  const path = input.dataset.path, type = input.dataset.type;
+  const raw = input.value.trim();
+  const baseVal = input.dataset.base === '' ? null : Number(input.dataset.base);
+  let v = raw === '' ? null : parseNum(raw);
+  if (v != null && type === 'pct') v = Math.round(v * 100) / 10000;
+  if (v == null || (baseVal != null && Math.abs(v - baseVal) < 1e-9)) delete state.overrides[path];
+  else state.overrides[path] = v;
+  input.closest('.input-wrap').classList.toggle('changed', state.overrides[path] != null);
+  render();
 }
 
 init();
