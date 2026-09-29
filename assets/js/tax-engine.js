@@ -136,6 +136,7 @@ function calculateOnce(input = {}, rates) {
   const bonus = num(emp.bonus);
   const benefits = num(emp.taxableBenefits);
   const empExpenses = num(emp.expenses); // allowable employment expenses (reduce tax, not NI)
+  const payrollGiving = num(emp.payrollGiving); // Give As You Earn: taken from pay before tax, not NI
   const grossPay = salary + bonus;
   const pension = emp.pension || {};
   const method = ['salary_sacrifice', 'net_pay', 'relief_at_source'].includes(pension.method) ? pension.method : 'none';
@@ -160,7 +161,7 @@ function calculateOnce(input = {}, rates) {
     rasGrossEmployment = pensionGross;
     pensionCash = pensionGross * (1 - basicRate);
   }
-  const employmentIncome = Math.max(0, taxablePay + benefits - empExpenses);
+  const employmentIncome = Math.max(0, taxablePay + benefits - empExpenses - payrollGiving);
 
   // ---------------------------------------------------------------- 2. Self-employment
   const se = input.selfEmployment || {};
@@ -320,7 +321,7 @@ function calculateOnce(input = {}, rates) {
   const plans = Array.isArray(input.studentLoans) ? input.studentLoans.filter((p) => sl[p]) : [];
   const unearned = savings + dividends + otherIncome + propertyProfit;
   const slUnearned = unearned > sl.unearnedIncomeLimit ? unearned : 0;
-  const slIncome = taxablePay + profit + slUnearned;
+  const slIncome = niablePay + profit + slUnearned;
   const undergradPlans = plans.filter((p) => p !== 'postgraduate');
   let undergrad = null;
   if (undergradPlans.length) {
@@ -357,7 +358,32 @@ function calculateOnce(input = {}, rates) {
   const propertyCash = Math.max(0, rent - propExpensesUsed - (usePropertyAllowance ? propExpenses : 0)) - financeCosts;
   const cashIncome = grossPay + profit + Math.max(0, rent - propExpensesUsed - (usePropertyAllowance ? propExpenses : 0)) + savings + dividends + otherIncome;
   const totalDeductions = incomeTaxTotal + niTotal + studentLoanTotal + hicbcCharge;
-  const takeHome = cashIncome - financeCosts - pensionCash - sePensionPaid - totalDeductions + childBenefitReceived;
+  const takeHome = cashIncome - financeCosts - pensionCash - sePensionPaid - payrollGiving - totalDeductions + childBenefitReceived;
+
+  // ---------------------------------------------------------------- 10. Charitable giving
+  // Gift Aid: the charity reclaims basic-rate tax (25p per £1 given). Your basic and higher rate
+  // limits are extended by the gross donation, and adjusted net income falls by it, so higher-rate
+  // taxpayers save more tax and the Personal Allowance taper and Child Benefit charge ease.
+  // You must have paid at least as much tax as the charities reclaim.
+  let giving = null;
+  if (giftAidPaid > 0 || payrollGiving > 0) {
+    const without = calculateOnce({ ...input, employment: { ...(input.employment || {}), payrollGiving: 0 }, adjustments: { ...(input.adjustments || {}), giftAid: 0 } }, rates);
+    const taxSaved = round2(without.totals.totalDeductions - totalDeductions);
+    const charityClaims = round2(giftAidGross - giftAidPaid);
+    const shortfall = Math.max(0, charityClaims - incomeTaxTotal);
+    giving = {
+      giftAidPaid, giftAidGross: round2(giftAidGross), charityClaims, payrollGiving,
+      charityReceives: round2(giftAidGross + payrollGiving),
+      bandExtension: round2(giftAidGross),
+      taxSaved,
+      netCost: round2(giftAidPaid + payrollGiving - taxSaved),
+      taxCoverShortfall: round2(shortfall),
+      incomeTaxWithout: without.incomeTax.total,
+      hicbcWithout: without.totals.hicbc,
+      personalAllowanceWithout: without.allowances.personalAllowance,
+    };
+    if (shortfall > 0.5) warnings.push(`Gift Aid: the charity reclaims ${new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP', maximumFractionDigits: 0 }).format(charityClaims)} but you only pay ${new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP', maximumFractionDigits: 0 }).format(incomeTaxTotal)} income tax. HMRC can ask you to pay the difference, so either give less under Gift Aid or do not tick the Gift Aid box.`);
+  }
   const grossIncome = totalIncome + (method === 'salary_sacrifice' || method === 'net_pay' ? pensionGross : 0);
 
   const r = (v) => round2(v);
@@ -368,7 +394,7 @@ function calculateOnce(input = {}, rates) {
     region,
     warnings,
     income: {
-      employment: { salary, bonus, grossPay, taxableBenefits: benefits, expenses: empExpenses, pensionMethod: method, pensionGross: r(pensionGross), pensionCash: r(pensionCash), taxablePay: r(taxablePay), niablePay: r(niablePay), taxableIncome: r(employmentIncome) },
+      employment: { salary, bonus, grossPay, taxableBenefits: benefits, expenses: empExpenses, payrollGiving, pensionMethod: method, pensionGross: r(pensionGross), pensionCash: r(pensionCash), taxablePay: r(taxablePay), niablePay: r(niablePay), taxableIncome: r(employmentIncome) },
       selfEmployment: { turnover, expenses, deduction: useTradingAllowance ? 'trading_allowance' : 'expenses', tradingAllowanceUsed: r(tradingAllowanceUsed), expensesUsed: r(expensesUsed), profit: r(profit), pensionPaid: r(sePensionPaid), pensionGross: r(sePensionGross) },
       property: { rentalIncome: rent, expenses: propExpenses, financeCosts, deduction: usePropertyAllowance ? 'property_allowance' : 'expenses', propertyAllowanceUsed: r(propertyAllowanceUsed), expensesUsed: r(propExpensesUsed), profit: r(propertyProfit), cash: r(propertyCash) },
       savings, dividends, otherIncome,
@@ -401,9 +427,10 @@ function calculateOnce(input = {}, rates) {
     },
     studentLoans: { plans, income: r(slIncome), unearnedIncluded: r(slUnearned), undergraduate: undergrad, postgraduate, total: studentLoanTotal },
     hicbc,
+    giving,
     totals: {
       grossIncome: r(grossIncome), cashIncome: r(cashIncome), pensionCash: r(pensionCash + sePensionPaid),
-      incomeTax: r(incomeTaxTotal), nationalInsurance: r(niTotal), studentLoans: studentLoanTotal, hicbc: hicbcCharge, childBenefitReceived: r(childBenefitReceived), financeCosts: r(financeCosts),
+      incomeTax: r(incomeTaxTotal), nationalInsurance: r(niTotal), studentLoans: studentLoanTotal, hicbc: hicbcCharge, childBenefitReceived: r(childBenefitReceived), financeCosts: r(financeCosts), payrollGiving: r(payrollGiving),
       totalDeductions: r(totalDeductions), takeHome: r(takeHome), takeHomeMonthly: r(takeHome / 12), takeHomeWeekly: r(takeHome / 52),
       effectiveRate: cashIncome > 0 ? totalDeductions / cashIncome : 0,
       employerCost: r(grossPay + class1Employer + (method === 'salary_sacrifice' ? pensionGross : 0)),

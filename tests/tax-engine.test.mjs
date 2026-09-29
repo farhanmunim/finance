@@ -280,3 +280,46 @@ test('propertyIncrementalTax uses the personal allowance when other income is lo
   // 5,270 of profit at 20%, 4,730 at 40%
   close(straddle.tax, 5270 * 0.2 + 4730 * 0.4);
 });
+
+test('gift aid: higher-rate taxpayer saves 20% of the gross donation', () => {
+  const r = calculate({ employment: { salary: 70000 }, adjustments: { giftAid: 800 } }, y2627);
+  close(r.giving.giftAidGross, 1000);
+  close(r.giving.charityClaims, 200);
+  close(r.giving.taxSaved, 200); // 40% - 20% on £1,000 of income moved into the basic band
+  close(r.giving.netCost, 600);
+  assert.equal(r.giving.taxCoverShortfall, 0);
+});
+
+test('gift aid: basic-rate taxpayer saves nothing extra but charity still gains', () => {
+  const r = calculate({ employment: { salary: 30000 }, adjustments: { giftAid: 800 } }, y2627);
+  close(r.giving.taxSaved, 0);
+  close(r.giving.charityReceives, 1000);
+});
+
+test('gift aid: restores personal allowance in the taper zone (60% effective relief)', () => {
+  const r = calculate({ employment: { salary: 110000 }, adjustments: { giftAid: 8000 } }, y2627);
+  close(r.giving.giftAidGross, 10000);
+  assert.equal(r.allowances.personalAllowance, 12570);
+  close(r.giving.taxSaved, 10000 * 0.6 - 10000 * 0.2); // 40% higher-rate relief + PA restored (worth 5,000 × 40%)
+});
+
+test('gift aid: warning when not enough tax paid to cover the charity claim', () => {
+  const r = calculate({ employment: { salary: 13000 }, adjustments: { giftAid: 2000 } }, y2627);
+  assert.ok(r.giving.taxCoverShortfall > 0);
+  assert.ok(r.warnings.some((w) => /Gift Aid/.test(w)));
+});
+
+test('payroll giving reduces taxable pay, not NI, and leaves take-home', () => {
+  const r = calculate({ employment: { salary: 60000, payrollGiving: 1200 } }, y2627);
+  const base = calculate({ employment: { salary: 60000 } }, y2627);
+  close(r.incomeTax.total, base.incomeTax.total - 1200 * 0.4);
+  close(r.nationalInsurance.total, base.nationalInsurance.total);
+  close(r.totals.takeHome, base.totals.takeHome - 1200 + 480);
+  close(r.giving.taxSaved, 480);
+  close(r.giving.netCost, 720);
+});
+
+test('student loan is based on NI-able pay (net-pay pension does not reduce it)', () => {
+  const r = calculate({ employment: { salary: 40000, pension: { method: 'net_pay', type: 'percent', value: 10 } }, studentLoans: ['plan2'] }, y2627);
+  close(r.studentLoans.income, 40000);
+});

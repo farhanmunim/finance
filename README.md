@@ -54,6 +54,7 @@ Implemented in `assets/js/tax-engine.js` (pure functions, unit-tested in `tests/
 7. **Property income.** Rent less allowable expenses (or the £1,000 property allowance). Mortgage interest and other finance costs are not deductible; a tax reducer of 20% × the lower of finance costs, property profits and non-savings income after allowances is given instead (ITTOIA 2005 s272A). Not available with the property allowance.
 8. **High Income Child Benefit Charge.** 1% of Child Benefit per £200 of adjusted net income over £60,000, all of it from £80,000. Child Benefit received is shown as tax-free income and the charge deducted; opting out of payments removes both.
 9. **Allowable employment expenses** reduce taxable pay but not NI.
+10. **Charitable giving.** Gift Aid donations are grossed up at the basic rate (the charity reclaims 25p per £1); the gross donation extends the basic and higher rate limits and reduces adjusted net income (so it can restore the Personal Allowance and reduce the Child Benefit charge). The tool shows the tax saved, the net cost, and warns when not enough tax has been paid to cover the charity's reclaim. Payroll Giving is deducted from pay before tax (no gross-up, NI unaffected).
 
 ### Custom rates
 

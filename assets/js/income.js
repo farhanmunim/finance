@@ -66,7 +66,7 @@ function readForm() {
   const mode = f.mode.value;
   const raw = {
     y: f.y.value, r: f.r.value, mode,
-    sal: f.sal.value, bon: f.bon.value, pm: f.pm.value, pv: f.pv.value, pt: f.pt.value, ben: f.ben.value, eex: f.eex.value,
+    sal: f.sal.value, bon: f.bon.value, pm: f.pm.value, pv: f.pv.value, pt: f.pt.value, ben: f.ben.value, eex: f.eex.value, pg: f.pg.value,
     to: f.to.value, ex: f.ex.value, ded: f.ded.value, sep: f.sep.value,
     rent: f.rent.value, pex: f.pex.value, fc: f.fc.value, pded: f.pded.value,
     sav: f.sav.value, div: f.div.value, oth: f.oth.value,
@@ -77,7 +77,7 @@ function readForm() {
   const input = {
     region: raw.r,
     employment: mode === 'self' ? {} : {
-      salary: parseNum(raw.sal), bonus: parseNum(raw.bon), taxableBenefits: parseNum(raw.ben), expenses: parseNum(raw.eex),
+      salary: parseNum(raw.sal), bonus: parseNum(raw.bon), taxableBenefits: parseNum(raw.ben), expenses: parseNum(raw.eex), payrollGiving: parseNum(raw.pg),
       pension: { method: raw.pm, type: raw.pt, value: parseNum(raw.pv) },
     },
     selfEmployment: mode === 'employed' ? {} : { turnover: parseNum(raw.to), expenses: parseNum(raw.ex), deduction: raw.ded, pensionPaid: parseNum(raw.sep) },
@@ -96,7 +96,7 @@ function restoreFromUrl() {
   if (q.y && state.index.years.some((y) => y.id === q.y)) f.y.value = q.y;
   if (q.r) setRadio('r', q.r);
   if (q.mode) setRadio('mode', q.mode);
-  for (const k of ['sal', 'bon', 'pv', 'ben', 'eex', 'to', 'ex', 'sep', 'rent', 'pex', 'fc', 'sav', 'div', 'oth', 'ga', 'ch']) if (q[k] != null && f[k]) f[k].value = q[k];
+  for (const k of ['sal', 'bon', 'pv', 'ben', 'eex', 'pg', 'to', 'ex', 'sep', 'rent', 'pex', 'fc', 'sav', 'div', 'oth', 'ga', 'ch']) if (q[k] != null && f[k]) f[k].value = q[k];
   if (q.pded) setRadio('pded', q.pded);
   if (q.cbo) f.cbo.checked = true;
   if (q.ov) { try { const o = JSON.parse(q.ov); if (o && typeof o === 'object') state.overrides = o; } catch { /* ignore bad overrides */ } }
@@ -127,6 +127,7 @@ function render() {
   results.append(heroCard(r, rates), summaryCard(r, m, rates));
   results.append(incomeCard(r, rates), allowancesCard(r, rates), incomeTaxCard(r, rates), niCard(r, rates));
   if (r.studentLoans.plans.length) results.append(studentLoanCard(r, rates));
+  if (r.giving) results.append(givingCard(r, rates));
   if (r.hicbc) results.append(hicbcCard(r, rates));
   results.append(sourcesCard(base));
   $('#ms-month').textContent = fmt.gbp(r.totals.takeHomeMonthly);
@@ -207,6 +208,7 @@ function summaryCard(r, m, rates) {
     ['Income tax', '− ' + money(t.incomeTax), { neg: true }],
     ['National Insurance', '− ' + money(t.nationalInsurance), { neg: true }],
     t.studentLoans > 0 ? ['Student loan repayments', '− ' + money(t.studentLoans), { neg: true }] : null,
+    t.payrollGiving > 0 ? ['Payroll Giving to charity', '− ' + money(t.payrollGiving), { neg: true, note: 'Taken from your pay before tax.' }] : null,
     t.financeCosts > 0 ? ['Mortgage interest on let property', '− ' + money(t.financeCosts), { neg: true, note: 'Paid from rent but not deductible for tax - see Step 3 for the 20% credit.' }] : null,
     t.hicbc > 0 ? ['High Income Child Benefit Charge', '− ' + money(t.hicbc), { neg: true }] : null,
     t.childBenefitReceived > 0 ? ['Child Benefit received (tax-free)', '+ ' + money(t.childBenefitReceived)] : null,
@@ -246,6 +248,7 @@ function incomeCard(r, rates) {
     }
     if (e.taxableBenefits > 0) rows.push(['Taxable benefits in kind', money(e.taxableBenefits)]);
     if (e.expenses > 0) rows.push(['Allowable work expenses', '− ' + money(e.expenses), { neg: true, sub: true }]);
+    if (e.payrollGiving > 0) rows.push(['Payroll Giving', '− ' + money(e.payrollGiving), { neg: true, sub: true, note: 'Donations taken before tax, so they never count as taxable income.' }]);
     rows.push(['Taxable employment income', money(e.taxableIncome), { total: true }]);
   }
   if (s.turnover > 0) {
@@ -287,9 +290,13 @@ function allowancesCard(r, rates) {
   const rows = [
     ['Standard Personal Allowance', money(a.personalAllowanceStandard)],
   ];
-  if (a.taper > 0) {
-    rows.push(['Adjusted net income', money(a.adjustedNetIncome), { sub: true, note: `Income above ${fmt.gbp(a.incomeLimit)} reduces the allowance by £1 for every £2.` }]);
-    rows.push(['Reduction', '− ' + money(a.taper), { neg: true, sub: true }]);
+  if (a.taper > 0 || a.giftAidGross > 0 || a.reliefAtSourceGross > 0) {
+    const bits = [];
+    if (a.reliefAtSourceGross > 0) bits.push(`less ${money(a.reliefAtSourceGross)} gross pension paid from taxed pay`);
+    if (a.giftAidGross > 0) bits.push(`less ${money(a.giftAidGross)} gross Gift Aid`);
+    rows.push(['Adjusted net income', money(a.adjustedNetIncome), { sub: true, note: `Total income ${money(r.income.total)}${bits.length ? ' ' + bits.join(', ') : ''}. The allowance is reduced by £1 for every £2 of this above ${fmt.gbp(a.incomeLimit)}.` }]);
+    if (a.taper > 0) rows.push(['Reduction', '− ' + money(a.taper), { neg: true, sub: true }]);
+    else rows.push(['Reduction', money(0), { sub: true, note: a.adjustedNetIncome < a.incomeLimit && r.income.total > a.incomeLimit ? 'Your pension or Gift Aid keeps you under the limit, so the full allowance is kept.' : null }]);
   }
   if (a.blindPersonsAllowance) rows.push(["Blind Person's Allowance", '+ ' + money(a.blindPersonsAllowance)]);
   if (a.marriageTransfer) rows.push(['Marriage Allowance transferred to partner', '− ' + money(a.marriageTransfer), { neg: true }]);
@@ -379,6 +386,42 @@ function studentLoanCard(r, rates) {
   return card;
 }
 
+function givingCard(r, rates) {
+  const g = r.giving;
+  const card = el('div', { class: 'card' });
+  card.append(el('div', { class: 'card-header' }, [el('div', {}, [el('h2', { text: 'Charitable giving' }), el('p', { text: 'What your donations cost you after tax relief.' })])]));
+  const rows = [];
+  if (g.giftAidPaid > 0) {
+    rows.push(['Gift Aid donations you paid', money(g.giftAidPaid)]);
+    rows.push(['Charity reclaims basic-rate tax', '+ ' + money(g.charityClaims), { sub: true, note: `25p for every £1 you give (${fmt.pct(rates.incomeTax.basicRate, 0)} of the gross amount).` }]);
+    rows.push(['Gross Gift Aid donation', money(g.giftAidGross), { total: true, note: `Your basic and higher rate limits are extended by this amount (Step 3), and it comes off adjusted net income (Step 2).` }]);
+  }
+  if (g.payrollGiving > 0) rows.push(['Payroll Giving from your pay', money(g.payrollGiving), { note: 'Deducted before tax, so relief at your top rate is automatic.' }]);
+  rows.push(['Charities receive in total', money(g.charityReceives), { total: true }]);
+  card.append(linesTable(rows));
+  const savedBits = [];
+  if (g.incomeTaxWithout - r.incomeTax.total > 0.5) savedBits.push(`${money(g.incomeTaxWithout - r.incomeTax.total)} less income tax`);
+  if (g.hicbcWithout - r.totals.hicbc > 0.5) savedBits.push(`${money(g.hicbcWithout - r.totals.hicbc)} less Child Benefit charge`);
+  if (g.personalAllowanceWithout < r.allowances.personalAllowance) savedBits.push(`${money(r.allowances.personalAllowance - g.personalAllowanceWithout)} more Personal Allowance`);
+  card.append(el('div', { class: 'stat-row', style: 'margin-top:14px' }, [
+    stat('Tax you save', money(g.taxSaved), savedBits.length ? savedBits.join(' · ') : 'no extra relief at the basic rate'),
+    stat('Net cost to you', money(g.netCost), `for ${money(g.charityReceives)} received by charities`),
+    stat('Cost per £1 the charity gets', g.charityReceives > 0 ? fmt.gbp(g.netCost / g.charityReceives, 2) : '-', 'after all reliefs'),
+  ]));
+  if (g.taxCoverShortfall > 0.5) card.append(el('div', { class: 'note-box warn', style: 'margin-top:12px', html: `You have not paid enough tax to cover the ${money(g.charityClaims)} the charity reclaims - HMRC can ask you for the ${money(g.taxCoverShortfall)} shortfall. Gift Aid only works if you pay at least that much income tax or capital gains tax in the year.` }));
+  card.append(explain('How Gift Aid relief works', [
+    el('ul', {}, [
+      el('li', { html: '<b>The charity\'s share:</b> your donation is treated as paid after basic-rate tax, so the charity reclaims 20% of the gross amount (25p per £1 you give). You must have paid at least that much tax in the year.' }),
+      el('li', { html: '<b>Your share:</b> your basic-rate and higher-rate limits are stretched by the gross donation, so income that would have been taxed at 40% or 45% is taxed at 20% instead. Basic-rate taxpayers get no extra relief; higher-rate taxpayers save a further 20p and additional-rate taxpayers 25p per £1 of gross donation. Claim it through Self Assessment or by asking HMRC to adjust your tax code.' }),
+      el('li', { html: '<b>Knock-on effects:</b> gross donations reduce adjusted net income, which can restore Personal Allowance lost above £100,000 (worth up to 60% relief) and cut the High Income Child Benefit Charge.' }),
+      el('li', { html: '<b>Scotland:</b> the charity still reclaims 20%. Scottish taxpayers on the 21%, 42%, 45% or 48% rates claim the difference the same way.' }),
+      el('li', { html: '<b>Payroll Giving</b> is taken from pay before tax, so relief at your top rate is immediate and nothing needs claiming, but there is no NI saving and no extra for the charity.' }),
+      el('li', { text: 'Donations made after 5 April but before you file can be carried back to the previous tax year; that and gifts of shares or land are not modelled.' }),
+    ]),
+  ]));
+  return card;
+}
+
 function hicbcCard(r, rates) {
   const h = r.hicbc;
   const card = el('div', { class: 'card' });
@@ -421,6 +464,7 @@ function rateFields(base, region) {
       ['incomeTax.marriageAllowanceTransfer', 'Marriage Allowance transfer', 'money'],
       ['incomeTax.tradingAllowance', 'Trading allowance', 'money'],
       ['incomeTax.propertyAllowance', 'Property allowance', 'money'],
+      ['incomeTax.basicRate', 'Relief rate for Gift Aid and pensions', 'pct'],
     ] },
     { group: region === 'scotland' ? 'Scottish income tax bands (taxable income after allowances)' : 'Income tax bands (taxable income after allowances)', fields: bands.flatMap((b, i) => [
       [`incomeTax.bands.${region}.${i}.rate`, `${b.name}`, 'pct'],

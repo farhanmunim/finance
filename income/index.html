@@ -110,6 +110,11 @@
                   <div class="input-wrap"><span class="affix">£</span><input id="empExpenses" name="eex" data-money placeholder="0"></div>
                   <span class="hint">Costs you must pay for your job that your employer does not reimburse, such as professional fees, uniform or business mileage. Reduce income tax only, not NI.</span>
                 </div>
+                <div class="field">
+                  <label for="payrollGiving">Payroll Giving (Give As You Earn)</label>
+                  <div class="input-wrap"><span class="affix">£</span><input id="payrollGiving" name="pg" data-money placeholder="0"></div>
+                  <span class="hint">Charity donations taken from your pay before tax, per year. You get full tax relief at your top rate straight away; NI still applies.</span>
+                </div>
               </div>
             </details>
           </div>
@@ -219,12 +224,12 @@
         </div>
 
         <details class="section" id="sec-adjust">
-          <summary><span>Other adjustments<span class="sub">Gift Aid, Marriage Allowance, Blind Person's Allowance, Child Benefit</span></span></summary>
+          <summary><span>Charity, allowances and Child Benefit<span class="sub">Gift Aid, Marriage Allowance, Blind Person's Allowance, Child Benefit</span></span></summary>
           <div class="body stack">
             <div class="field">
               <label for="giftAid">Gift Aid donations</label>
               <div class="input-wrap"><span class="affix">£</span><input id="giftAid" name="ga" data-money placeholder="0"></div>
-              <span class="hint">What you actually gave in the year. Extends your basic-rate band, which matters if you pay higher-rate tax.</span>
+              <span class="hint">What you actually gave to charity in the year with Gift Aid ticked. The charity reclaims 25p per £1; higher-rate taxpayers get extra relief and it can restore your Personal Allowance or reduce the Child Benefit charge.</span>
             </div>
             <div class="field">
               <label for="marriage">Marriage Allowance</label>
