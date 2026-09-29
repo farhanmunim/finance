@@ -123,3 +123,14 @@ test('buy-to-let: finance cost restriction gives a 20% credit instead of a deduc
   const capped = buyToLet({ annualRent: 6000, annualExpenses: 1000, annualInterest: 8000, annualMortgagePayments: 8000, taxRate: 0.2 });
   close(capped.credit, 1000);
 });
+
+test('savings allowance: interest within the allowance is untaxed', () => {
+  const o = { principal: 200000, termMonths: 300, annualRate: 5, type: 'repayment', monthlyOverpayment: 100 };
+  const noTax = overpayVsSave(o, 4, 0);
+  const withAllowance = overpayVsSave(o, 4, { rate: 0.2, allowance: 1000 });
+  const flat = overpayVsSave(o, 4, { rate: 0.2, allowance: 0 });
+  assert.ok(withAllowance.save.taxPaid > 0);
+  assert.ok(withAllowance.save.taxPaid < flat.save.taxPaid);
+  assert.equal(noTax.save.taxPaid, 0);
+  assert.ok(withAllowance.save.savings > flat.save.savings && withAllowance.save.savings < noTax.save.savings);
+});

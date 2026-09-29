@@ -250,16 +250,16 @@ function incomeCard(r, rates) {
   }
   if (s.turnover > 0) {
     rows.push(['Self-employed turnover', money(s.turnover)]);
-    if (s.deduction === 'trading_allowance') rows.push(['Trading allowance', '− ' + money(s.tradingAllowanceUsed), { neg: true, sub: true }]);
-    else rows.push(['Allowable expenses', '− ' + money(s.expensesUsed), { neg: true, sub: true }]);
+    if (s.deduction === 'trading_allowance') rows.push(['Trading allowance', '− ' + money(s.tradingAllowanceUsed), { neg: true, sub: true, note: s.auto ? `Chosen automatically: it beats deducting your ${money(s.expenses)} of expenses.` : null }]);
+    else rows.push(['Allowable expenses', '− ' + money(s.expensesUsed), { neg: true, sub: true, note: s.auto ? 'Chosen automatically: it beats the £1,000 trading allowance.' : null }]);
     rows.push(['Taxable profit', money(s.profit), { total: true }]);
     if (s.pensionGross > 0) rows.push(['Personal pension (relief at source)', money(s.pensionGross), { sub: true, note: `You pay ${money(s.pensionPaid)}; the provider adds ${money(s.pensionGross - s.pensionPaid)}. Extends your basic-rate band (Step 3).` }]);
   }
   const pr = i.property;
   if (pr.rentalIncome > 0) {
     rows.push(['Rental income', money(pr.rentalIncome)]);
-    if (pr.deduction === 'property_allowance') rows.push(['Property allowance', '− ' + money(pr.propertyAllowanceUsed), { neg: true, sub: true }]);
-    else if (pr.expensesUsed > 0) rows.push(['Allowable property expenses', '− ' + money(pr.expensesUsed), { neg: true, sub: true }]);
+    if (pr.deduction === 'property_allowance') rows.push(['Property allowance', '− ' + money(pr.propertyAllowanceUsed), { neg: true, sub: true, note: pr.auto ? 'Chosen automatically: it beats deducting expenses and claiming the mortgage interest credit.' : null }]);
+    else rows.push(['Allowable property expenses', '− ' + money(pr.expensesUsed), { neg: true, sub: true, note: pr.auto ? 'Chosen automatically: expenses plus the mortgage interest credit beat the £1,000 property allowance.' : null }]);
     rows.push(['Taxable property profit', money(pr.profit), { total: true, note: pr.financeCosts > 0 ? `Mortgage interest of ${money(pr.financeCosts)} is not deducted here; a 20% tax credit is given in Step 3 instead.` : null }]);
   }
   if (i.savings > 0) rows.push(['Savings interest', money(i.savings)]);

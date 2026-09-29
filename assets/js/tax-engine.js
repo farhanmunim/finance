@@ -102,6 +102,26 @@ function levelOfBand(id) {
  */
 export function calculate(input = {}, rates) {
   if (!rates) throw new Error('rates are required');
+  const seAuto = num(input.selfEmployment?.turnover) > 0 && !['expenses', 'trading_allowance'].includes(input.selfEmployment?.deduction);
+  const prAuto = num(input.property?.rentalIncome) > 0 && !['expenses', 'property_allowance'].includes(input.property?.deduction);
+  if (seAuto || prAuto) {
+    // "Automatic": try each allowance choice and keep the one with the lowest total deductions.
+    const seOpts = seAuto ? ['expenses', 'trading_allowance'] : [input.selfEmployment?.deduction];
+    const prOpts = prAuto ? ['expenses', 'property_allowance'] : [input.property?.deduction];
+    let best = null;
+    for (const se of seOpts) for (const pr of prOpts) {
+      const r = calculateOnce({ ...input, selfEmployment: { ...(input.selfEmployment || {}), deduction: se }, property: { ...(input.property || {}), deduction: pr } }, rates);
+      if (!best || r.totals.totalDeductions < best.totals.totalDeductions - 0.005) best = r;
+    }
+    if (seAuto) best.income.selfEmployment.auto = true;
+    if (prAuto) best.income.property.auto = true;
+    best.warnings = best.warnings.filter((w) => !/trading allowance - deducting actual expenses|property allowance, so it has not been applied/.test(w));
+    return best;
+  }
+  return calculateOnce(input, rates);
+}
+
+function calculateOnce(input = {}, rates) {
   const it = rates.incomeTax;
   const ni = rates.nationalInsurance;
   const sl = rates.studentLoans;
@@ -388,6 +408,35 @@ export function calculate(input = {}, rates) {
       effectiveRate: cashIncome > 0 ? totalDeductions / cashIncome : 0,
       employerCost: r(grossPay + class1Employer + (method === 'salary_sacrifice' ? pensionGross : 0)),
     },
+  };
+}
+
+/**
+ * Tax caused by adding a let property on top of someone's other income, using the full
+ * calculation (Personal Allowance, band straddling, taper, Scottish rates, finance-cost credit
+ * caps). Returns the extra tax, the credit actually given, and what the tax would have been if
+ * mortgage interest were fully deductible.
+ * @param {object} p { region, otherIncome, rentalIncome, expenses, financeCosts, deduction }
+ */
+export function propertyIncrementalTax(p, rates) {
+  const base = calculate({ region: p.region, employment: { salary: num(p.otherIncome) } }, rates);
+  const withProp = calculate({ region: p.region, employment: { salary: num(p.otherIncome) }, property: { rentalIncome: p.rentalIncome, expenses: p.expenses, financeCosts: p.financeCosts, deduction: p.deduction || 'auto' } }, rates);
+  const oldRules = calculate({ region: p.region, employment: { salary: num(p.otherIncome) }, property: { rentalIncome: p.rentalIncome, expenses: num(p.expenses) + num(p.financeCosts), financeCosts: 0, deduction: 'expenses' } }, rates);
+  const tax = round2(withProp.incomeTax.total - base.incomeTax.total);
+  return {
+    tax,
+    taxBeforeCredit: round2(tax + withProp.incomeTax.financeCostReducer),
+    credit: withProp.incomeTax.financeCostReducer,
+    creditBase: withProp.incomeTax.financeCostReliefBase,
+    creditRate: withProp.incomeTax.financeCostReliefRate,
+    oldRulesTax: round2(oldRules.incomeTax.total - base.incomeTax.total),
+    profit: withProp.income.property.profit,
+    deductionUsed: withProp.income.property.deduction,
+    allowanceUsed: withProp.income.property.propertyAllowanceUsed,
+    personalAllowanceUnusedBefore: base.allowances.unused,
+    hicbc: null,
+    level: withProp.incomeTax.level,
+    warnings: withProp.warnings,
   };
 }
 

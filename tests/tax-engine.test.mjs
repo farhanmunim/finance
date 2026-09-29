@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { calculate, marginalRate, applyOverrides } from '../assets/js/tax-engine.js';
+import { calculate, marginalRate, applyOverrides, propertyIncrementalTax } from '../assets/js/tax-engine.js';
 
 const y2627 = JSON.parse(readFileSync(new URL('../data/tax-years/2026-27.json', import.meta.url)));
 const y2526 = JSON.parse(readFileSync(new URL('../data/tax-years/2025-26.json', import.meta.url)));
@@ -247,4 +247,36 @@ test('rate overrides change the calculation', () => {
   close(r.nationalInsurance.class1.total, (30000 - 12570) * 0.1);
   // original untouched
   assert.equal(y2627.incomeTax.personalAllowance, 12570);
+});
+
+test('automatic deduction picks the trading allowance when expenses are small', () => {
+  const auto = calculate({ selfEmployment: { turnover: 20000, expenses: 300 } }, y2627);
+  const ta = calculate({ selfEmployment: { turnover: 20000, expenses: 300, deduction: 'trading_allowance' } }, y2627);
+  assert.equal(auto.income.selfEmployment.deduction, 'trading_allowance');
+  assert.equal(auto.income.selfEmployment.auto, true);
+  close(auto.totals.totalDeductions, ta.totals.totalDeductions);
+  const big = calculate({ selfEmployment: { turnover: 20000, expenses: 5000 } }, y2627);
+  assert.equal(big.income.selfEmployment.deduction, 'expenses');
+});
+
+test('automatic property deduction keeps the interest credit when that is cheaper', () => {
+  const r = calculate({ employment: { salary: 60000 }, property: { rentalIncome: 12000, expenses: 500, financeCosts: 6000 } }, y2627);
+  // expenses 500 + 20% credit on 6,000 (=1,200 off tax) beats a 1,000 allowance (400 off tax at 40%)
+  assert.equal(r.income.property.deduction, 'expenses');
+  close(r.incomeTax.financeCostReducer, 1200);
+  const small = calculate({ employment: { salary: 60000 }, property: { rentalIncome: 3000, expenses: 100, financeCosts: 200 } }, y2627);
+  assert.equal(small.income.property.deduction, 'property_allowance');
+});
+
+test('propertyIncrementalTax uses the personal allowance when other income is low', () => {
+  const noIncome = propertyIncrementalTax({ region: 'ruk', otherIncome: 0, rentalIncome: 10000, expenses: 1000, financeCosts: 3000 }, y2627);
+  assert.equal(noIncome.tax, 0); // profit 9,000 is within the personal allowance
+  const higher = propertyIncrementalTax({ region: 'ruk', otherIncome: 60000, rentalIncome: 12000, expenses: 2000, financeCosts: 4000, deduction: 'expenses' }, y2627);
+  close(higher.taxBeforeCredit, 4000);
+  close(higher.credit, 800);
+  close(higher.tax, 3200);
+  close(higher.oldRulesTax, 2400);
+  const straddle = propertyIncrementalTax({ region: 'ruk', otherIncome: 45000, rentalIncome: 12000, expenses: 2000, financeCosts: 0, deduction: 'expenses' }, y2627);
+  // 5,270 of profit at 20%, 4,730 at 40%
+  close(straddle.tax, 5270 * 0.2 + 4730 * 0.4);
 });

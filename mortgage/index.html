@@ -135,13 +135,14 @@
                 <span class="hint">The best easy-access or fixed rate you could get.</span>
               </div>
               <div class="field">
-                <label for="savingsTax">Tax on that interest</label>
-                <select id="savingsTax" name="st" class="plain">
-                  <option value="0">None (ISA or within your savings allowance)</option>
-                  <option value="0.2">20% (basic rate)</option>
-                  <option value="0.4">40% (higher rate)</option>
-                  <option value="0.45">45% (additional rate)</option>
+                <label for="savingsBand">Your income tax band</label>
+                <select id="savingsBand" name="sb" class="plain">
+                  <option value="basic">Basic rate (20%)</option>
+                  <option value="higher">Higher rate (40%)</option>
+                  <option value="additional">Additional rate (45%)</option>
+                  <option value="isa">Savings in an ISA (no tax)</option>
                 </select>
+                <span class="hint">Interest is only taxed above your Personal Savings Allowance, which is applied automatically.</span>
               </div>
             </div>
             <p class="hint muted small">Uses the overpayments you entered above. Both options spend the same cash each month, so the comparison is fair.</p>
@@ -164,21 +165,16 @@
             </div>
             <div class="row">
               <div class="field">
-                <label for="btlTaxRate">Your income tax rate</label>
-                <select id="btlTaxRate" name="btr" class="plain">
-                  <option value="0.2">Basic rate (20%)</option>
-                  <option value="0.4" selected>Higher rate (40%)</option>
-                  <option value="0.45">Additional rate (45%)</option>
-                  <option value="0.21">Scottish intermediate (21%)</option>
-                  <option value="0.42">Scottish higher (42%)</option>
-                  <option value="0.48">Scottish top (48%)</option>
-                </select>
-                <span class="hint">The rate the rental profit would be taxed at on top of your other income.</span>
+                <label for="otherIncome">Your other taxable income</label>
+                <div class="input-wrap"><span class="affix">£</span><input id="otherIncome" name="oi" data-money placeholder="e.g. 45,000"></div>
+                <span class="hint">Salary, pension or profits before tax. The rent is taxed on top of this, using your Personal Allowance and tax bands automatically.</span>
               </div>
               <div class="field">
-                <label for="btlRelief">Mortgage interest tax credit</label>
-                <div class="input-wrap"><input id="btlRelief" name="brl" type="number" min="0" max="100" step="1" value="20"><span class="affix suffix">%</span></div>
-                <span class="hint">Landlords get a 20% credit on finance costs instead of deducting them.</span>
+                <span class="label">Where you live</span>
+                <div class="segmented block" role="radiogroup" aria-label="Region">
+                  <input type="radio" name="reg" id="reg-ruk" value="ruk" checked><label for="reg-ruk">England, Wales or NI</label>
+                  <input type="radio" name="reg" id="reg-scot" value="scotland"><label for="reg-scot">Scotland</label>
+                </div>
               </div>
             </div>
           </div>

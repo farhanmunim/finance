@@ -134,10 +134,11 @@
             <div class="field">
               <span class="label">Deduct from income</span>
               <div class="segmented block" role="radiogroup" aria-label="Deduction method">
-                <input type="radio" name="ded" id="ded-exp" value="expenses" checked><label for="ded-exp">Actual expenses</label>
+                <input type="radio" name="ded" id="ded-auto" value="auto" checked><label for="ded-auto">Automatic</label>
+                <input type="radio" name="ded" id="ded-exp" value="expenses"><label for="ded-exp">Actual expenses</label>
                 <input type="radio" name="ded" id="ded-ta" value="trading_allowance"><label for="ded-ta">£1,000 trading allowance</label>
               </div>
-              <span class="hint">You can use the trading allowance instead of expenses, which is simpler if your costs are under £1,000.</span>
+              <span class="hint">You can claim the £1,000 trading allowance instead of expenses. "Automatic" uses whichever leaves you with less tax.</span>
             </div>
             <div class="field">
               <label for="sePension">Personal pension contributions <span class="muted">(optional)</span></label>
@@ -170,10 +171,11 @@
             <div class="field">
               <span class="label">Deduct from rent</span>
               <div class="segmented block" role="radiogroup" aria-label="Property deduction method">
-                <input type="radio" name="pded" id="pded-exp" value="expenses" checked><label for="pded-exp">Actual expenses</label>
+                <input type="radio" name="pded" id="pded-auto" value="auto" checked><label for="pded-auto">Automatic</label>
+                <input type="radio" name="pded" id="pded-exp" value="expenses"><label for="pded-exp">Actual expenses</label>
                 <input type="radio" name="pded" id="pded-pa" value="property_allowance"><label for="pded-pa">£1,000 property allowance</label>
               </div>
-              <span class="hint">The property allowance replaces expenses and the mortgage interest credit. Rent-a-Room relief for lodgers is not modelled.</span>
+              <span class="hint">The property allowance replaces expenses and the mortgage interest credit. "Automatic" uses whichever leaves you with less tax. Rent-a-Room relief for lodgers is not modelled.</span>
             </div>
           </div>
         </details>

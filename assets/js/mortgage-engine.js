@@ -184,22 +184,35 @@ function plannedOverpayment(o, m) {
  * @param {number} savingsRate gross savings rate (%)
  * @param {number} taxRate tax on the interest (0, 0.2, 0.4, 0.45)
  */
-export function overpayVsSave(options, savingsRate, taxRate = 0) {
+export function overpayVsSave(options, savingsRate, tax = 0) {
+  const taxRate = typeof tax === 'number' ? tax : num(tax?.rate);
+  const allowance = typeof tax === 'number' ? 0 : num(tax?.allowance); // Personal Savings Allowance per tax year
   const base = amortise({ ...options, monthlyOverpayment: 0, annualOverpayment: 0, lumpSum: 0 });
   const over = amortise(options);
   if (!base.ok || !over.ok) return null;
   const horizon = base.months;
-  const rm = (num(savingsRate) * (1 - taxRate)) / 100 / 12;
-  let savA = 0, savB = 0, depositsA = 0, depositsB = 0;
+  const rGross = num(savingsRate) / 100 / 12;
+  let savA = 0, savB = 0, depositsA = 0, depositsB = 0, taxA = 0, taxB = 0;
+  let yearInterestA = 0, yearInterestB = 0; // gross interest so far this tax year
+  // Interest is credited gross; tax is due only on the part above the allowance in each year.
+  const credit = (bal, yearInterest) => {
+    const gross = bal * rGross;
+    const taxable = Math.max(0, Math.min(gross, yearInterest + gross - allowance));
+    const t = taxable * taxRate;
+    return { gross, t };
+  };
   const yearly = [];
   for (let m = 1; m <= horizon; m++) {
+    if ((m - 1) % 12 === 0) { yearInterestA = 0; yearInterestB = 0; }
     const b = base.schedule[m - 1];
     const a = over.schedule[m - 1];
     const outflow = b.payment + plannedOverpayment(options, m);
     const cashA = a ? a.payment + a.overpayment : 0;
-    savA = savA * (1 + rm) + Math.max(0, outflow - cashA);
+    const ca = credit(savA, yearInterestA); yearInterestA += ca.gross; taxA += ca.t;
+    savA = savA + ca.gross - ca.t + Math.max(0, outflow - cashA);
     depositsA += Math.max(0, outflow - cashA);
-    savB = savB * (1 + rm) + Math.max(0, outflow - b.payment);
+    const cb = credit(savB, yearInterestB); yearInterestB += cb.gross; taxB += cb.t;
+    savB = savB + cb.gross - cb.t + Math.max(0, outflow - b.payment);
     depositsB += Math.max(0, outflow - b.payment);
     if (m % 12 === 0 || m === horizon) {
       const balA = a ? a.closing : 0;
@@ -210,17 +223,18 @@ export function overpayVsSave(options, savingsRate, taxRate = 0) {
   return {
     horizonMonths: horizon,
     netRate: round2(num(savingsRate) * (1 - taxRate) * 100) / 100,
-    overpay: { savings: last.savingsA, balance: last.balanceA, net: last.netA, interestPaid: over.totalInterest, deposits: round2(depositsA), interestEarned: round2(savA - depositsA) },
-    save: { savings: last.savingsB, balance: last.balanceB, net: last.netB, interestPaid: base.totalInterest, deposits: round2(depositsB), interestEarned: round2(savB - depositsB) },
+    taxRate, allowance,
+    overpay: { savings: last.savingsA, balance: last.balanceA, net: last.netA, interestPaid: over.totalInterest, deposits: round2(depositsA), interestEarned: round2(savA - depositsA), taxPaid: round2(taxA) },
+    save: { savings: last.savingsB, balance: last.balanceB, net: last.netB, interestPaid: base.totalInterest, deposits: round2(depositsB), interestEarned: round2(savB - depositsB), taxPaid: round2(taxB) },
     advantage: round2(last.netA - last.netB), // positive = overpaying wins
     yearly,
   };
 }
 
 /** Gross savings rate at which saving and overpaying come out equal (bisection). */
-export function breakEvenSavingsRate(options, taxRate = 0) {
+export function breakEvenSavingsRate(options, tax = 0) {
   let lo = 0, hi = 40;
-  const f = (r) => overpayVsSave(options, r, taxRate)?.advantage ?? 0;
+  const f = (r) => overpayVsSave(options, r, tax)?.advantage ?? 0;
   if (f(lo) <= 0) return 0;
   if (f(hi) >= 0) return null;
   for (let i = 0; i < 40; i++) { const mid = (lo + hi) / 2; if (f(mid) > 0) lo = mid; else hi = mid; }

@@ -45,7 +45,7 @@ Figures currently covered by the automatic check: Personal Allowance and its inc
 
 Implemented in `assets/js/tax-engine.js` (pure functions, unit-tested in `tests/`).
 
-1. **Income.** Employment pay after salary sacrifice or net-pay pension contributions, plus taxable benefits; self-employed profit (turnover less expenses or the trading allowance); savings interest; dividends; other income.
+1. **Income.** Employment pay after salary sacrifice or net-pay pension contributions, plus taxable benefits, less allowable expenses; self-employed profit (turnover less expenses or the trading allowance, chosen automatically unless overridden); property profit; savings interest; dividends; other income.
 2. **Adjusted net income** = total income less gross relief-at-source pension contributions and gross Gift Aid. Used for the Personal Allowance taper and the Child Benefit charge.
 3. **Allowances.** Personal Allowance tapered by £1 for every £2 over the income limit; Blind Person's Allowance; Marriage Allowance (transfer reduces the allowance, receipt is a tax reducer for basic-rate taxpayers). Allowances are set against non-savings income first, then savings, then dividends.
 4. **Income tax.** Non-savings income through the rUK or Scottish bands. Savings then dividends are stacked on top using UK-wide bands: starting rate for savings (£5,000 reduced by non-savings income over the allowance), Personal Savings Allowance by taxpayer level, dividend allowance, dividend rates. Relief-at-source pension and Gift Aid extend the band limits.
@@ -67,10 +67,10 @@ Implemented in `assets/js/mortgage-engine.js`. Interest accrues monthly at one t
 
 Analysis on top of the schedule:
 
-- **Overpay or save?** Both strategies spend identical cash each month (standard payment plus planned overpayment). Strategy A overpays, and once the mortgage is cleared the freed payments go into savings; strategy B pays the mortgage as normal and saves the overpayment money at the entered rate net of tax, compounding monthly. Net position (savings − balance) is compared at the end of the original term and the break-even gross savings rate is found by bisection.
+- **Overpay or save?** Both strategies spend identical cash each month (standard payment plus planned overpayment). Strategy A overpays, and once the mortgage is cleared the freed payments go into savings; strategy B pays the mortgage as normal and saves the overpayment money at the entered rate, compounding monthly. Interest is credited gross and taxed at the user's band only above the Personal Savings Allowance for each tax year. Net position (savings − balance) is compared at the end of the original term and the break-even gross savings rate is found by bisection.
 - **Rate sensitivity.** Monthly payment and total interest at −2 to +3 percentage points.
 - **Loan-to-value tiers.** Extra deposit needed to reach 95/90/85/80/75/60% LTV.
-- **Buy-to-let.** Rental profit taxed at the chosen marginal rate with the finance-cost restriction (20% credit on the lower of interest and profit), cash after mortgage and tax, gross yield, and the extra tax versus full deductibility.
+- **Buy-to-let.** The tax on the rent is the difference between the full income-tax calculation with and without the property, given the user's other income and region, so the Personal Allowance, band straddling, the allowance taper, Scottish rates and the finance-cost credit caps are all applied. The property allowance is used instead of costs when that is cheaper. Shows cash after mortgage and tax, gross yield, and the extra tax versus full deductibility.
 
 ## Project layout
 

@@ -1,13 +1,16 @@
-import { amortise, compare, overpayVsSave, breakEvenSavingsRate, rateSensitivity, ltvBands, buyToLet } from './mortgage-engine.js';
-import { fmt, parseNum, initMoneyInputs, $, $$, el, linesTable, urlState, debounce } from './ui.js';
+import { amortise, compare, overpayVsSave, breakEvenSavingsRate, rateSensitivity, ltvBands } from './mortgage-engine.js';
+import { propertyIncrementalTax } from './tax-engine.js';
+import { fmt, parseNum, initMoneyInputs, $, $$, el, linesTable, urlState, debounce, loadJSON } from './ui.js';
 
 const form = $('#form');
 const results = $('#results');
 const COLOR_BASE = '#2a78d6';
 const COLOR_OVER = '#eb6834';
+const state = { rates: null, ratesLabel: '' };
 
-function init() {
+async function init() {
   restoreFromUrl();
+  loadRates().then(() => render());
   initMoneyInputs(form);
   const rerender = debounce(() => { syncVisibility(); render(); }, 80);
   form.addEventListener('input', rerender);
@@ -17,6 +20,27 @@ function init() {
   window.addEventListener('resize', debounce(() => { if (window.innerWidth !== lastWidth) { lastWidth = window.innerWidth; render(); } }, 150));
   syncVisibility();
   render();
+}
+
+async function loadRates() {
+  try {
+    const index = await loadJSON('/data/tax-years/index.json');
+    const meta = index.years.find((y) => y.id === index.default) || index.years[0];
+    state.rates = await loadJSON(meta.file);
+    state.ratesLabel = state.rates.label;
+  } catch (e) {
+    state.rates = null;
+  }
+}
+
+/** Tax treatment of savings interest for the chosen band: rate and Personal Savings Allowance. */
+function savingsTaxFor(band) {
+  if (band === 'isa') return { rate: 0, allowance: 0, label: 'ISA, no tax' };
+  const it = state.rates?.incomeTax;
+  const fallback = { basic: [0.2, 1000], higher: [0.4, 500], additional: [0.45, 0] };
+  const rate = it ? (it.bands.ruk.find((b) => b.id === band)?.rate ?? fallback[band][0]) : fallback[band][0];
+  const allowance = it ? (it.savings.personalSavingsAllowance[band] ?? fallback[band][1]) : fallback[band][1];
+  return { rate, allowance, label: `${fmt.pct(rate, 0)} above a ${fmt.gbp(allowance)} savings allowance` };
 }
 
 function syncVisibility() {
@@ -33,7 +57,7 @@ function syncVisibility() {
 function readForm() {
   const f = form;
   const raw = { pv: f.pv.value, dep: f.dep.value, dt: f.dt.value, t: f.t.value, r: f.r.value, type: f.type.value, fy: f.fy.value, rr: f.rr.value, op: f.op.checked ? '1' : '', pay: f.pay.value, mo: f.mo.value, ao: f.ao.value, ls: f.ls.value, ly: f.ly.value, eff: f.eff.value,
-    sr: f.sr.value, st: f.st.value, rent: f.rent.value, bex: f.bex.value, btr: f.btr.value, brl: f.brl.value };
+    sr: f.sr.value, sb: f.sb.value, rent: f.rent.value, bex: f.bex.value, oi: f.oi.value, reg: f.reg.value };
   const price = parseNum(raw.pv);
   const depositInput = parseNum(raw.dep);
   const deposit = raw.dt === 'percent' ? price * depositInput / 100 : depositInput;
@@ -55,11 +79,11 @@ function readForm() {
   };
   const extras = {
     savingsRate: raw.sr.trim() === '' ? null : parseNum(raw.sr),
-    savingsTax: parseNum(raw.st),
+    savingsBand: raw.sb,
     rentMonthly: parseNum(raw.rent),
     btlExpenses: parseNum(raw.bex),
-    btlTaxRate: parseNum(raw.btr),
-    btlRelief: parseNum(raw.brl) / 100,
+    otherIncome: parseNum(raw.oi),
+    region: raw.reg,
   };
   return { raw, opts, price, deposit, principal, termYears, extras };
 }
@@ -68,9 +92,9 @@ function restoreFromUrl() {
   const q = urlState.read();
   const f = form;
   const setRadio = (name, v) => { const r = $(`input[name="${name}"][value="${v}"]`, f); if (r) r.checked = true; };
-  for (const k of ['pv', 'dep', 't', 'r', 'fy', 'rr', 'pay', 'mo', 'ao', 'ls', 'ly', 'sr', 'rent', 'bex', 'brl']) if (q[k] != null && f[k]) f[k].value = q[k];
-  if (q.st) f.st.value = q.st;
-  if (q.btr) f.btr.value = q.btr;
+  for (const k of ['pv', 'dep', 't', 'r', 'fy', 'rr', 'pay', 'mo', 'ao', 'ls', 'ly', 'sr', 'rent', 'bex', 'oi']) if (q[k] != null && f[k]) f[k].value = q[k];
+  if (q.sb) f.sb.value = q.sb;
+  if (q.reg) setRadio('reg', q.reg);
   if (q.sr) $('#sec-save').open = true;
   if (q.rent) $('#sec-btl').open = true;
   if (q.dt) setRadio('dt', q.dt);
@@ -293,24 +317,26 @@ function saveCard(c, opts, extras) {
     card.append(el('p', { class: 'muted small', text: 'Add an overpayment in the form to compare putting that money into savings instead.' }));
     return card;
   }
-  const taxRate = extras.savingsTax || 0;
-  const be = breakEvenSavingsRate(opts, taxRate);
+  const tax = savingsTaxFor(extras.savingsBand);
+  const taxRate = tax.rate;
+  const be = breakEvenSavingsRate(opts, tax);
   const rateLine = be == null
     ? 'No realistic savings rate beats overpaying here.'
-    : `Savings need to pay more than <b class="num">${be.toFixed(2)}%</b>${taxRate ? ` before tax (${(be * (1 - taxRate)).toFixed(2)}% after ${fmt.pct(taxRate, 0)} tax)` : ''} to beat overpaying this mortgage.`;
+    : `Savings need to pay more than <b class="num">${be.toFixed(2)}%</b> to beat overpaying this mortgage${taxRate ? ` (${tax.label}${state.ratesLabel ? `, ${state.ratesLabel} rules` : ''})` : ''}.`;
   if (extras.savingsRate == null) {
     card.append(el('div', { class: 'note-box', html: rateLine + ' Enter a savings rate in the "Overpay or save?" section to see the full comparison.' }));
     card.append(saveExplain());
     return card;
   }
-  const v = overpayVsSave(opts, extras.savingsRate, taxRate);
+  const v = overpayVsSave(opts, extras.savingsRate, tax);
   if (!v) return card;
   const wins = v.advantage >= 0;
-  card.append(el('div', { class: `note-box ${Math.abs(v.advantage) < 1 ? '' : 'good'}`, html: `${wins ? 'Overpaying wins' : 'Saving wins'} by <b class="num">${fmt.gbp(Math.abs(v.advantage))}</b> after ${fmt.months(v.horizonMonths)} at a savings rate of ${extras.savingsRate}%${taxRate ? ` (${v.netRate}% after tax)` : ''}. ${rateLine}` }));
+  card.append(el('div', { class: `note-box ${Math.abs(v.advantage) < 1 ? '' : 'good'}`, html: `${wins ? 'Overpaying wins' : 'Saving wins'} by <b class="num">${fmt.gbp(Math.abs(v.advantage))}</b> after ${fmt.months(v.horizonMonths)} at a savings rate of ${extras.savingsRate}%. ${rateLine}` }));
   card.append(el('div', { class: 'table-scroll' }, linesTable([
     ['Interest paid on the mortgage', fmt.gbp(v.save.interestPaid), { mid: fmt.gbp(v.overpay.interestPaid) }],
     ['Savings built up', fmt.gbp(v.save.savings), { mid: fmt.gbp(v.overpay.savings), note: 'Overpaying: once the mortgage is cleared the freed-up payments go into savings.' }],
-    ['Savings interest earned', fmt.gbp(v.save.interestEarned), { mid: fmt.gbp(v.overpay.interestEarned) }],
+    ['Savings interest earned (after tax)', fmt.gbp(v.save.interestEarned), { mid: fmt.gbp(v.overpay.interestEarned) }],
+    taxRate ? ['Tax paid on interest', fmt.gbp(v.save.taxPaid), { mid: fmt.gbp(v.overpay.taxPaid), note: v.allowance ? `Only interest above the ${fmt.gbp(v.allowance)} Personal Savings Allowance each year is taxed.` : 'No savings allowance at this band.' }] : null,
     ['Mortgage still owed', fmt.gbp(v.save.balance), { mid: fmt.gbp(v.overpay.balance) }],
     ['Net position (savings − mortgage)', fmt.gbp(v.save.net), { mid: fmt.gbp(v.overpay.net), total: true }],
   ], { header: ['At the end of the term', 'Overpay', 'Save instead'] })));
@@ -324,7 +350,7 @@ function saveCard(c, opts, extras) {
 function saveExplain() {
   return el('details', { class: 'explain' }, [el('summary', { text: 'How this comparison works' }), el('div', { class: 'body' }, [
     el('p', { text: 'Both options spend exactly the same money each month: the normal mortgage payment plus your overpayment. In one, the extra goes into the mortgage (and once it is paid off, or the payment drops, the freed-up cash goes into savings). In the other, the mortgage runs as normal and the extra goes into a savings account compounding monthly.' }),
-    el('p', { text: 'At the end of the original term we compare "net position": savings minus anything still owed. The break-even rate is the savings rate at which the two come out equal; it is roughly your mortgage rate grossed up for any tax you pay on interest.' }),
+    el('p', { text: 'At the end of the original term we compare "net position": savings minus anything still owed. The break-even rate is the savings rate at which the two come out equal. Interest is credited gross and taxed only above your Personal Savings Allowance for the tax year, so the break-even rate rises as the pot grows beyond what the allowance covers.' }),
     el('p', { text: 'Things this ignores: the peace of mind and flexibility of accessible savings, an emergency fund, early repayment charges, and pension contributions, which often beat both because of tax relief.' }),
   ])]);
 }
@@ -332,28 +358,37 @@ function saveExplain() {
 // ------------------------------------------------------------------ buy-to-let
 function btlCard(run, opts, extras, price) {
   const card = el('div', { class: 'card' });
-  card.append(el('div', { class: 'card-header' }, [el('div', {}, [el('h2', { text: 'Buy-to-let: rent, tax and yield' }), el('p', { text: 'First-year figures using the mortgage above with standard payments.' })])]));
+  card.append(el('div', { class: 'card-header' }, [el('div', {}, [el('h2', { text: 'Buy-to-let: rent, tax and yield' }), el('p', { text: `First-year figures using the mortgage above with standard payments${state.ratesLabel ? `, ${state.ratesLabel} tax rules` : ''}.` })])]));
+  if (!state.rates) { card.append(el('p', { class: 'note-box warn', text: 'Tax rates could not be loaded, so the tax on rent cannot be shown.' })); return card; }
   const y1 = run.yearly[0] || { interest: 0, paid: 0 };
-  const b = buyToLet({ annualRent: extras.rentMonthly * 12, annualExpenses: extras.btlExpenses, annualInterest: y1.interest, annualMortgagePayments: y1.paid, taxRate: extras.btlTaxRate, reliefRate: extras.btlRelief, price });
+  const rent = extras.rentMonthly * 12;
+  const t = propertyIncrementalTax({ region: extras.region, otherIncome: extras.otherIncome, rentalIncome: rent, expenses: extras.btlExpenses, financeCosts: y1.interest }, state.rates);
+  const cashBeforeTax = rent - extras.btlExpenses - y1.paid;
+  const cashAfterTax = cashBeforeTax - t.tax;
+  const grossYield = price > 0 ? rent / price : null;
   card.append(el('div', { class: 'hero' }, [
-    tile('Rent after costs and tax', fmt.gbp(b.cashAfterTax), b.cashAfterTax >= 0 ? 'a year, after mortgage payments' : 'a year - the property loses money', b.cashAfterTax >= 0),
-    tile('Tax on the rent', fmt.gbp(b.tax), `${fmt.pct(b.taxRate, 0)} rate, after the interest credit`),
-    tile('Gross yield', b.grossYield != null ? fmt.pct(b.grossYield) : '-', 'annual rent ÷ property value'),
+    tile('Rent after costs and tax', fmt.gbp(cashAfterTax), cashAfterTax >= 0 ? 'a year, after mortgage payments' : 'a year - the property loses money', cashAfterTax >= 0),
+    tile('Tax on the rent', fmt.gbp(t.tax), t.tax > 0 ? `on top of ${fmt.gbp(extras.otherIncome)} other income` : extras.otherIncome + t.profit <= (state.rates.incomeTax.personalAllowance) ? 'covered by your Personal Allowance' : 'nothing due'),
+    tile('Gross yield', grossYield != null ? fmt.pct(grossYield) : '-', 'annual rent ÷ property value'),
   ]));
+  const usedAllowance = t.deductionUsed === 'property_allowance';
   card.append(el('div', { class: 'table-scroll', style: 'margin-top:14px' }, linesTable([
-    ['Rental income', fmt.gbp(b.rent)],
-    ['Running costs', '− ' + fmt.gbp(b.expenses), { neg: true }],
-    ['Taxable rental profit', fmt.gbp(b.profit), { total: true, note: 'Mortgage interest is not deducted here.' }],
-    [`Tax at ${fmt.pct(b.taxRate, 0)}`, fmt.gbp(b.taxBeforeCredit)],
-    [`Less ${fmt.pct(b.reliefRate, 0)} credit on ${fmt.gbp(b.creditBase)} of interest`, '− ' + fmt.gbp(b.credit), { neg: true, note: b.creditBase < b.interest ? 'Credit limited to the rental profit; the rest carries forward.' : null }],
-    ['Tax due', fmt.gbp(b.tax), { total: true }],
-    ['Mortgage payments (year 1)', '− ' + fmt.gbp(b.payments), { neg: true, note: `of which ${fmt.gbp(b.interest)} is interest` }],
-    ['Cash left after mortgage and tax', fmt.gbp(b.cashAfterTax), { total: true }],
+    ['Rental income', fmt.gbp(rent)],
+    usedAllowance ? ['Property allowance', '− ' + fmt.gbp(t.allowanceUsed), { neg: true, note: 'Chosen automatically: it beats deducting your costs and claiming the interest credit.' }] : ['Running costs', '− ' + fmt.gbp(Math.min(extras.btlExpenses, rent)), { neg: true }],
+    ['Taxable rental profit', fmt.gbp(t.profit), { total: true, note: 'Mortgage interest is not deducted here.' }],
+    ['Tax on the profit at your rates', fmt.gbp(t.taxBeforeCredit), { note: t.personalAllowanceUnusedBefore > 0 ? `${fmt.gbp(Math.min(t.personalAllowanceUnusedBefore, t.profit))} of the profit is covered by unused Personal Allowance.` : null }],
+    t.credit > 0 ? [`Less ${fmt.pct(t.creditRate, 0)} credit on ${fmt.gbp(t.creditBase)} of interest`, '− ' + fmt.gbp(t.credit), { neg: true, note: t.creditBase < y1.interest - 0.5 ? 'Credit limited by your profit or income; the rest carries forward.' : null }] : (usedAllowance ? null : ['Mortgage interest credit', fmt.gbp(0), { note: 'No tax to set it against this year; it carries forward.' }]),
+    ['Tax due', fmt.gbp(t.tax), { total: true }],
+    ['Mortgage payments (year 1)', '− ' + fmt.gbp(y1.paid), { neg: true, note: `of which ${fmt.gbp(y1.interest)} is interest` }],
+    ['Cash left after mortgage and tax', fmt.gbp(cashAfterTax), { total: true }],
   ])));
-  if (b.extraTaxVsOldRules > 0) card.append(el('div', { class: 'note-box warn', style: 'margin-top:12px', html: `The interest restriction costs you <b class="num">${fmt.gbp(b.extraTaxVsOldRules)}</b> a year more tax than if interest were fully deductible (pre-2020 rules). ${b.effectiveTaxRate != null && b.effectiveTaxRate > b.taxRate + 1e-6 ? `That is an effective rate of ${fmt.pct(Math.min(9.99, b.effectiveTaxRate), 0)} on your real profit.` : ''}` }));
+  if (t.tax - t.oldRulesTax > 0.5) {
+    const realProfit = rent - extras.btlExpenses - y1.interest;
+    card.append(el('div', { class: 'note-box warn', style: 'margin-top:12px', html: `The interest restriction costs you <b class="num">${fmt.gbp(t.tax - t.oldRulesTax)}</b> a year more tax than if interest were fully deductible (pre-2020 rules).${realProfit > 0 && t.tax / realProfit > 0.5 ? ` That is an effective rate of ${fmt.pct(t.tax / realProfit, 0)} on your real profit of ${fmt.gbp(realProfit)}.` : ''}` }));
+  }
   card.append(el('details', { class: 'explain' }, [el('summary', { text: 'How rental income is taxed' }), el('div', { class: 'body' }, [
-    el('p', { text: 'Rental profit is added to your other income and taxed at your marginal rate. Since April 2020 individual landlords cannot deduct mortgage interest; instead the tax bill is reduced by 20% of the interest, capped at the lower of the interest, the rental profit and your total taxable non-savings income. Capital repayments were never deductible. Companies, and furnished holiday lets before April 2025, had different rules.' }),
-    el('p', { text: 'Interest falls each year on a repayment mortgage, so the tax credit shrinks over time while rent usually rises. Stamp duty surcharges, capital gains tax on sale and void periods are not included. Use the take-home pay calculator to see the rent alongside your other income.' }),
+    el('p', { text: 'Rental profit is added to your other income and taxed through the same Personal Allowance and bands, so this card works out the extra tax the property causes: tax with the property minus tax without it. Since April 2020 individual landlords cannot deduct mortgage interest; instead the tax bill is reduced by 20% of the interest, capped at the lower of the interest, the rental profit and your total non-savings income after allowances. Capital repayments were never deductible.' }),
+    el('p', { text: 'The £1,000 property allowance can be claimed instead of costs (it removes the interest credit); the better option is chosen for you. Interest falls each year on a repayment mortgage, so the credit shrinks while rent usually rises. Stamp duty surcharges, capital gains tax on sale, void periods and the Child Benefit charge are not included. Use the take-home pay calculator to see the rent alongside all your other income.' }),
   ])]));
   return card;
 }
