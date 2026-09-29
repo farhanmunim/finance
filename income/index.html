@@ -48,7 +48,7 @@
               <span class="label">How do you earn?</span>
               <div class="segmented block" role="radiogroup" aria-label="Type of income">
                 <input type="radio" name="mode" id="m-emp" value="employed" checked><label for="m-emp">Employed</label>
-                <input type="radio" name="mode" id="m-self" value="self"><label for="m-self">Self-employed</label>
+                <input type="radio" name="mode" id="m-self" value="self"><label for="m-self">Self&#8209;employed</label>
                 <input type="radio" name="mode" id="m-both" value="both"><label for="m-both">Both</label>
               </div>
             </div>
@@ -97,7 +97,7 @@
                 </div>
               </div>
             </div>
-            <details class="explain">
+            <details class="explain options">
               <summary>More employment options</summary>
               <div class="body stack">
                 <div class="field">
@@ -136,8 +136,8 @@
               <span class="label">Deduct from income</span>
               <div class="segmented block" role="radiogroup" aria-label="Deduction method">
                 <input type="radio" name="ded" id="ded-auto" value="auto" checked><label for="ded-auto">Automatic</label>
-                <input type="radio" name="ded" id="ded-exp" value="expenses"><label for="ded-exp">Actual expenses</label>
-                <input type="radio" name="ded" id="ded-ta" value="trading_allowance"><label for="ded-ta">£1,000 trading allowance</label>
+                <input type="radio" name="ded" id="ded-exp" value="expenses"><label for="ded-exp">Expenses</label>
+                <input type="radio" name="ded" id="ded-ta" value="trading_allowance"><label for="ded-ta">£1,000 allowance</label>
               </div>
               <span class="hint">You can claim the £1,000 trading allowance instead of expenses. "Automatic" uses whichever leaves you with less tax.</span>
             </div>
@@ -173,8 +173,8 @@
               <span class="label">Deduct from rent</span>
               <div class="segmented block" role="radiogroup" aria-label="Property deduction method">
                 <input type="radio" name="pded" id="pded-auto" value="auto" checked><label for="pded-auto">Automatic</label>
-                <input type="radio" name="pded" id="pded-exp" value="expenses"><label for="pded-exp">Actual expenses</label>
-                <input type="radio" name="pded" id="pded-pa" value="property_allowance"><label for="pded-pa">£1,000 property allowance</label>
+                <input type="radio" name="pded" id="pded-exp" value="expenses"><label for="pded-exp">Expenses</label>
+                <input type="radio" name="pded" id="pded-pa" value="property_allowance"><label for="pded-pa">£1,000 allowance</label>
               </div>
               <span class="hint">The property allowance replaces expenses and the mortgage interest credit. "Automatic" uses whichever leaves you with less tax. Rent-a-Room relief for lodgers is not modelled.</span>
             </div>
@@ -182,7 +182,7 @@
         </details>
 
         <details class="section" id="sec-other">
-          <summary><span>Other income<span class="sub">Savings interest, dividends, rental and other income</span></span></summary>
+          <summary><span>Other income<span class="sub">Savings interest, dividends and other taxable income</span></span></summary>
           <div class="body stack">
             <div class="row">
               <div class="field">
@@ -199,7 +199,7 @@
             <div class="field">
               <label for="otherIncome">Other taxable income</label>
               <div class="input-wrap"><span class="affix">£</span><input id="otherIncome" name="oth" data-money placeholder="0"></div>
-              <span class="hint">For example rental profits or a taxable pension. Taxed like earnings but with no National Insurance.</span>
+              <span class="hint">For example a taxable pension or trust income. Taxed like earnings but with no National Insurance.</span>
             </div>
           </div>
         </details>

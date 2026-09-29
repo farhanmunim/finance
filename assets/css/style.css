@@ -121,6 +121,15 @@ select.plain:focus { outline: 0; border-color: var(--accent); box-shadow: 0 0 0 
 .segmented input:checked + label { background: #fff; color: var(--text); box-shadow: 0 1px 2px rgba(0,0,0,.08), 0 0 0 1px var(--border); }
 .segmented input:focus-visible + label { outline: 2px solid var(--accent); outline-offset: 1px; }
 .segmented.mini label { min-height: 30px; padding: 4px 10px; font-size: 0.8rem; }
+/* Narrow columns: tighter segmented labels so three options fit on one line */
+@container (max-width: 420px) {
+  .segmented.block label { padding-left: 6px; padding-right: 6px; font-size: 0.8rem; min-width: 5.5rem; }
+}
+/* Narrow results: the headline tile takes the full width; an odd last stat does too (no orphans) */
+@container (max-width: 560px) {
+  .hero .tile.primary { grid-column: 1 / -1; }
+  .stat-row > :last-child:nth-child(odd) { grid-column: 1 / -1; }
+}
 .segmented.mini.block label { min-width: 3rem; }
 
 /* Toggle switch */
@@ -159,6 +168,8 @@ details.section > .body { padding: 4px var(--space-3) var(--space-3); }
 .hero .tile .k { font-size: 0.75rem; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: .04em; }
 .hero .tile .v { font-size: clamp(1.25rem, 1rem + 1.2vw, 1.6rem); font-weight: 700; letter-spacing: -0.02em; margin-top: 2px; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
 .hero .tile.primary .v { color: var(--accent-text); }
+.hero .tile.loss { background: var(--warn-soft); }
+.hero .tile.loss .v { color: var(--warn); }
 .hero .tile .s { font-size: 0.78rem; color: var(--muted); margin-top: 2px; }
 .stat-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 9rem), 1fr)); gap: var(--space-2); }
 .stat { background: var(--surface-2); border-radius: var(--radius-sm); padding: var(--space-2); min-width: 0; }
@@ -205,6 +216,9 @@ details.explain summary { cursor: pointer; color: var(--accent); font-weight: 50
 details.explain summary::-webkit-details-marker { display: none; }
 details.explain summary::before { content: "?"; flex: none; display: inline-grid; place-items: center; width: 18px; height: 18px; border-radius: 50%; background: var(--accent-soft); color: var(--accent-text); font-size: 0.75rem; font-weight: 700; margin-right: 8px; }
 details.explain .body { margin-top: 8px; padding: var(--space-2) var(--space-3); background: var(--surface-2); border-radius: var(--radius-sm); }
+/* Optional input sections use a +/− marker instead of the "?" explanation marker */
+details.explain.options summary::before { content: "+"; font-size: 0.9rem; }
+details.explain.options[open] summary::before { content: "−"; }
 details.explain .body.stack { display: grid; }
 details.explain ol, details.explain ul { margin: 6px 0; padding-left: 20px; }
 details.explain li + li { margin-top: 4px; }
@@ -242,7 +256,7 @@ details.explain p + p { margin-top: 8px; }
 .bars { display: grid; gap: 6px; }
 .bars .bar-row { display: grid; grid-template-columns: minmax(4.5rem, auto) 1fr minmax(5rem, auto); align-items: center; gap: 10px; font-size: var(--text-sm); }
 .bars .bar-row .track { height: 12px; background: var(--surface-2); border-radius: 999px; overflow: hidden; }
-.bars .bar-row .fill { height: 100%; background: var(--series-1); border-radius: 999px; }
+.bars .bar-row .fill { display: block; height: 100%; background: var(--series-1); border-radius: 999px; }
 .bars .bar-row.current .fill { background: var(--series-2); }
 .bars .bar-row.current { font-weight: 700; }
 .bars .bar-row .val { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }

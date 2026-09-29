@@ -16,6 +16,7 @@ async function init() {
   form.addEventListener('input', rerender);
   form.addEventListener('change', () => { syncVisibility(); render(); });
   form.addEventListener('submit', (e) => e.preventDefault());
+  $('#deposit').addEventListener('blur', formatDeposit);
   let lastWidth = window.innerWidth;
   window.addEventListener('resize', debounce(() => { if (window.innerWidth !== lastWidth) { lastWidth = window.innerWidth; render(); } }, 150));
   syncVisibility();
@@ -43,9 +44,17 @@ function savingsTaxFor(band) {
   return { rate, allowance, label: `${fmt.pct(rate, 0)} above a ${fmt.gbp(allowance)} savings allowance` };
 }
 
+function formatDeposit() {
+  const f = form;
+  const n = parseNum(f.dep.value);
+  if (f.dep.value.trim() === '' || n === 0) return;
+  f.dep.value = f.dt.value === 'percent' ? String(Math.round(n * 100) / 100) : n.toLocaleString('en-GB', { maximumFractionDigits: 0 });
+}
+
 function syncVisibility() {
   const f = form;
   $('#depAffix').textContent = f.dt.value === 'percent' ? '%' : '£';
+  if (document.activeElement !== f.dep) formatDeposit();
   $('#payment-field').hidden = !f.op.checked;
   $('#own-payment-toggle').hidden = f.type.value === 'interest_only';
   $('#effect-field').hidden = f.type.value === 'interest_only' || f.op.checked;
@@ -141,8 +150,9 @@ function render() {
   $('#mobile-summary').hidden = false;
 }
 
-function tile(k, v, s, primary) {
-  return el('div', { class: `tile${primary ? ' primary' : ''}` }, [el('div', { class: 'k', text: k }), el('div', { class: 'v', text: v }), s ? el('div', { class: 's', text: s }) : null]);
+function tile(k, v, s, variant) {
+  const cls = variant === 'loss' ? ' primary loss' : variant ? ' primary' : '';
+  return el('div', { class: `tile${cls}` }, [el('div', { class: 'k', text: k }), el('div', { class: 'v', text: v }), s ? el('div', { class: 's', text: s }) : null]);
 }
 function stat(k, v, s) {
   return el('div', { class: 'stat' }, [el('div', { class: 'k', text: k }), el('div', { class: 'v', text: v }), s ? el('div', { class: 's', text: s }) : null]);
@@ -166,7 +176,7 @@ function heroCard(c, opts, principal, price, termYears) {
   ]));
   const ltv = price > 0 ? principal / price : 0;
   card.append(el('div', { class: 'stat-row', style: 'margin-top:14px' }, [
-    stat('Loan-to-value', fmt.pct(ltv, 0), `${fmt.gbp(principal)} of ${fmt.gbp(price)}`),
+    stat('Loan-to-value', fmt.pct(ltv, 1), `${fmt.gbp(principal)} of ${fmt.gbp(price)}`),
     stat(io ? 'Term ends' : 'Paid off', payoffDate(r.months), fmt.months(r.months) + ' from now'),
     stat('Interest as share of payments', r.totalPaid > 0 ? fmt.pct(r.totalInterest / r.totalPaid, 0) : '0%', 'of everything you pay'),
   ]));
@@ -367,7 +377,7 @@ function btlCard(run, opts, extras, price) {
   const cashAfterTax = cashBeforeTax - t.tax;
   const grossYield = price > 0 ? rent / price : null;
   card.append(el('div', { class: 'hero' }, [
-    tile('Rent after costs and tax', fmt.gbp(cashAfterTax), cashAfterTax >= 0 ? 'a year, after mortgage payments' : 'a year - the property loses money', cashAfterTax >= 0),
+    tile('Rent after costs and tax', fmt.gbpSigned(cashAfterTax), cashAfterTax >= 0 ? 'a year, after mortgage payments' : 'a year - the property loses money', cashAfterTax >= 0 ? true : 'loss'),
     tile('Tax on the rent', fmt.gbp(t.tax), t.tax > 0 ? `on top of ${fmt.gbp(extras.otherIncome)} other income` : extras.otherIncome + t.profit <= (state.rates.incomeTax.personalAllowance) ? 'covered by your Personal Allowance' : 'nothing due'),
     tile('Gross yield', grossYield != null ? fmt.pct(grossYield) : '-', 'annual rent ÷ property value'),
   ]));
@@ -380,7 +390,7 @@ function btlCard(run, opts, extras, price) {
     t.credit > 0 ? [`Less ${fmt.pct(t.creditRate, 0)} credit on ${fmt.gbp(t.creditBase)} of interest`, '− ' + fmt.gbp(t.credit), { neg: true, note: t.creditBase < y1.interest - 0.5 ? 'Credit limited by your profit or income; the rest carries forward.' : null }] : (usedAllowance ? null : ['Mortgage interest credit', fmt.gbp(0), { note: 'No tax to set it against this year; it carries forward.' }]),
     ['Tax due', fmt.gbp(t.tax), { total: true }],
     ['Mortgage payments (year 1)', '− ' + fmt.gbp(y1.paid), { neg: true, note: `of which ${fmt.gbp(y1.interest)} is interest` }],
-    ['Cash left after mortgage and tax', fmt.gbp(cashAfterTax), { total: true }],
+    ['Cash left after mortgage and tax', fmt.gbpSigned(cashAfterTax), { total: true }],
   ])));
   if (t.tax - t.oldRulesTax > 0.5) {
     const realProfit = rent - extras.btlExpenses - y1.interest;
