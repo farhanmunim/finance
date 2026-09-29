@@ -90,7 +90,12 @@ export const urlState = {
   },
   write(obj) {
     const p = new URLSearchParams();
-    for (const [k, v] of Object.entries(obj)) if (v !== '' && v != null && v !== false) p.set(k, v);
+    for (const [k, v] of Object.entries(obj)) {
+      if (v === '' || v == null || v === false) continue;
+      const str = String(v);
+      // formatted money such as "320,000" is stored as plain digits
+      p.set(k, /^-?[\d,]+(\.\d+)?$/.test(str) ? str.replace(/,/g, '') : str);
+    }
     const qs = p.toString();
     history.replaceState(null, '', qs ? `?${qs}` : location.pathname);
   },
