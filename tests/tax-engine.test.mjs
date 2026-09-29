@@ -323,3 +323,75 @@ test('student loan is based on NI-able pay (net-pay pension does not reduce it)'
   const r = calculate({ employment: { salary: 40000, pension: { method: 'net_pay', type: 'percent', value: 10 } }, studentLoans: ['plan2'] }, y2627);
   close(r.studentLoans.income, 40000);
 });
+
+// ---------------------------------------------------------------- reviewer checks
+const y1617 = applyOverrides(y2627, {
+  'incomeTax.personalAllowance': 11000, 'incomeTax.bands.ruk.0.upTo': 32000, 'incomeTax.bands.ruk.1.upTo': 150000,
+});
+
+test('HMRC landlord case study 1 (Sophia): credit on finance costs, no extra tax', () => {
+  const r = calculate({ property: { rentalIncome: 52000, expenses: 9000, financeCosts: 20000, deduction: 'expenses' } }, y1617);
+  close(r.incomeTax.beforeReducers, 6400);
+  close(r.incomeTax.financeCostReducer, 4000);
+  close(r.incomeTax.total, 2400);
+});
+
+test('HMRC landlord case study 4 (Brian year 1): credit capped at property profits, rest carried forward', () => {
+  const r = calculate({ employment: { salary: 36000 }, property: { rentalIncome: 20000, expenses: 7000, financeCosts: 15000, deduction: 'expenses' } }, y1617);
+  close(r.incomeTax.beforeReducers, 8800);
+  close(r.incomeTax.financeCostReducer, 2600);
+  close(r.incomeTax.total, 6200);
+  close(r.incomeTax.financeCostsCarriedForward, 2000);
+});
+
+test('HMRC landlord case study 4 (Brian year 2): brought-forward finance costs used', () => {
+  const r = calculate({ employment: { salary: 36000 }, property: { rentalIncome: 24000, expenses: 2000, financeCosts: 15000, financeCostsBroughtForward: 2000, deduction: 'expenses' } }, y1617);
+  close(r.incomeTax.beforeReducers, 12400);
+  close(r.incomeTax.financeCostReducer, 3400);
+  close(r.incomeTax.total, 9000);
+  close(r.incomeTax.financeCostsCarriedForward, 0);
+});
+
+test('allowances: set against dividends before savings when that is cheaper (ITA 2007 s25)', () => {
+  const r = calculate({ other: { savingsInterest: 6000, dividends: 20000 } }, y2627);
+  // PA 12,570 all against dividends; savings covered by starting rate (5,000) + PSA (1,000)
+  close(r.allowances.allocated.dividends, 12570);
+  close(r.allowances.allocated.savings, 0);
+  close(r.incomeTax.savings.tax, 0);
+  close(r.incomeTax.dividends.tax, (20000 - 12570 - 500) * 0.1075);
+  assert.equal(r.allowances.reordered, true);
+});
+
+test('allowances: default order kept when reordering would not help', () => {
+  const r = calculate({ employment: { salary: 10000 }, other: { savingsInterest: 3000 } }, y2627);
+  assert.equal(r.allowances.reordered, false);
+  close(r.incomeTax.total, 0);
+  // and a case where moving £500 of allowance to dividends does save tax
+  const d = calculate({ employment: { salary: 10000 }, other: { savingsInterest: 3000, dividends: 1000 } }, y2627);
+  assert.equal(d.allowances.reordered, true);
+  close(d.incomeTax.total, 0);
+});
+
+test('Scottish taxpayer keeps the £1,000 savings allowance while under the UK higher-rate threshold', () => {
+  const r = calculate({ region: 'scotland', employment: { salary: 45000 }, other: { savingsInterest: 900 } }, y2627);
+  // taxable earnings 32,430: Scottish higher rate (42%) but below the UK 37,700 limit
+  assert.equal(r.incomeTax.level, 'basic');
+  close(r.incomeTax.savings.tax, 0);
+  const above = calculate({ region: 'scotland', employment: { salary: 55000 }, other: { savingsInterest: 900 } }, y2627);
+  assert.equal(above.incomeTax.level, 'higher');
+  close(above.incomeTax.savings.tax, 400 * 0.4);
+});
+
+test('pension relief limit and annual allowance warnings', () => {
+  const over = calculate({ employment: { salary: 20000, pension: { method: 'relief_at_source', type: 'amount', value: 25000 } } }, y2627);
+  assert.ok(over.warnings.some((w) => /100% of your earnings/.test(w)));
+  const aa = calculate({ employment: { salary: 150000, pension: { method: 'net_pay', type: 'amount', value: 70000 } } }, y2627);
+  assert.ok(aa.warnings.some((w) => /annual allowance/.test(w)));
+  const fine = calculate({ employment: { salary: 60000, pension: { method: 'net_pay', type: 'percent', value: 10 } } }, y2627);
+  assert.equal(fine.warnings.length, 0);
+});
+
+test('marriage allowance transfer warns when the transferor is a higher-rate taxpayer', () => {
+  const r = calculate({ employment: { salary: 60000 }, adjustments: { marriageAllowance: 'transfer' } }, y2627);
+  assert.ok(r.warnings.some((w) => /transferred/.test(w)));
+});

@@ -68,7 +68,7 @@ function readForm() {
     y: f.y.value, r: f.r.value, mode,
     sal: f.sal.value, bon: f.bon.value, pm: f.pm.value, pv: f.pv.value, pt: f.pt.value, ben: f.ben.value, eex: f.eex.value, pg: f.pg.value,
     to: f.to.value, ex: f.ex.value, ded: f.ded.value, sep: f.sep.value,
-    rent: f.rent.value, pex: f.pex.value, fc: f.fc.value, pded: f.pded.value,
+    rent: f.rent.value, pex: f.pex.value, fc: f.fc.value, fcbf: f.fcbf.value, pded: f.pded.value,
     sav: f.sav.value, div: f.div.value, oth: f.oth.value,
     sl: $$('input[name="sl"]:checked', f).map((c) => c.value).join(','),
     ga: f.ga.value, ma: f.ma.value, bpa: f.bpa.checked ? '1' : '', ch: f.ch.value, cbo: f.cbo.checked ? '1' : '', p: state.period === 'year' ? '' : state.period,
@@ -81,7 +81,7 @@ function readForm() {
       pension: { method: raw.pm, type: raw.pt, value: parseNum(raw.pv) },
     },
     selfEmployment: mode === 'employed' ? {} : { turnover: parseNum(raw.to), expenses: parseNum(raw.ex), deduction: raw.ded, pensionPaid: parseNum(raw.sep) },
-    property: { rentalIncome: parseNum(raw.rent), expenses: parseNum(raw.pex), financeCosts: parseNum(raw.fc), deduction: raw.pded },
+    property: { rentalIncome: parseNum(raw.rent), expenses: parseNum(raw.pex), financeCosts: parseNum(raw.fc), financeCostsBroughtForward: parseNum(raw.fcbf), deduction: raw.pded },
     other: { savingsInterest: parseNum(raw.sav), dividends: parseNum(raw.div), otherIncome: parseNum(raw.oth) },
     studentLoans: raw.sl ? raw.sl.split(',') : [],
     adjustments: { giftAid: parseNum(raw.ga), marriageAllowance: raw.ma, blindPersonsAllowance: !!raw.bpa, childBenefitChildren: parseNum(raw.ch), childBenefitOptedOut: !!raw.cbo },
@@ -96,11 +96,11 @@ function restoreFromUrl() {
   if (q.y && state.index.years.some((y) => y.id === q.y)) f.y.value = q.y;
   if (q.r) setRadio('r', q.r);
   if (q.mode) setRadio('mode', q.mode);
-  for (const k of ['sal', 'bon', 'pv', 'ben', 'eex', 'pg', 'to', 'ex', 'sep', 'rent', 'pex', 'fc', 'sav', 'div', 'oth', 'ga', 'ch']) if (q[k] != null && f[k]) f[k].value = q[k];
+  for (const k of ['sal', 'bon', 'pv', 'ben', 'eex', 'pg', 'to', 'ex', 'sep', 'rent', 'pex', 'fc', 'fcbf', 'sav', 'div', 'oth', 'ga', 'ch']) if (q[k] != null && f[k]) f[k].value = q[k];
   if (q.pded) setRadio('pded', q.pded);
   if (q.cbo) f.cbo.checked = true;
   if (q.ov) { try { const o = JSON.parse(q.ov); if (o && typeof o === 'object') state.overrides = o; } catch { /* ignore bad overrides */ } }
-  if (q.rent || q.pex || q.fc) $('#sec-property').open = true;
+  if (q.rent || q.pex || q.fc || q.fcbf) $('#sec-property').open = true;
   if (Object.keys(state.overrides).length) $('#sec-rates').open = true;
   if (q.pm) f.pm.value = q.pm;
   if (q.pt) setRadio('pt', q.pt);
@@ -307,7 +307,7 @@ function allowancesCard(r, rates) {
   if (a.allocated.savings) alloc.push(`${money(a.allocated.savings)} against savings interest`);
   if (a.allocated.dividends) alloc.push(`${money(a.allocated.dividends)} against dividends`);
   if (a.unused > 0) alloc.push(`${money(a.unused)} unused`);
-  card.append(el('p', { class: 'muted small', style: 'margin-top:10px', text: `Used: ${alloc.join(', ') || 'nothing to set it against'}. Taxable income after allowances: ${money(a.taxable.total)}.` }));
+  card.append(el('p', { class: 'muted small', style: 'margin-top:10px', text: `Used: ${alloc.join(', ') || 'nothing to set it against'}. Taxable income after allowances: ${money(a.taxable.total)}.${a.reordered ? ' Some allowance has been set against dividends ahead of savings interest because that gives you a lower bill, as the rules allow.' : ''}` }));
   card.append(explain('Why might my allowance be lower?', [
     el('p', { html: `Everyone starts with the standard Personal Allowance. If your <b>adjusted net income</b> (total income minus gross pension contributions paid from taxed pay and Gift Aid) is over ${fmt.gbp(a.incomeLimit)}, the allowance drops by £1 for every £2 above that, reaching zero at ${fmt.gbp(a.incomeLimit + 2 * a.personalAllowanceStandard)}. Paying more into a pension is the usual way to keep your allowance.` }),
   ]));
@@ -328,7 +328,7 @@ function incomeTaxCard(r, rates) {
   if (it.savings.pieces.length) { rows.push([el('b', { text: 'Savings interest' }), '', { mid: '' }]); rows.push(...pieceRows(it.savings.pieces)); }
   if (it.dividends.pieces.length) { rows.push([el('b', { text: 'Dividends' }), '', { mid: '' }]); rows.push(...pieceRows(it.dividends.pieces)); }
   if (it.marriageReducer > 0) rows.push(['Marriage Allowance tax reduction', '− ' + money(it.marriageReducer), { neg: true, mid: '' }]);
-  if (it.financeCostReducer > 0) rows.push([`Mortgage interest tax credit (${fmt.pct(it.financeCostReliefRate, 0)} of ${money(it.financeCostReliefBase)})`, '− ' + money(it.financeCostReducer), { neg: true, mid: '', note: it.financeCostReliefBase < r.income.property.financeCosts ? 'Limited to your property profit; the unused amount carries forward to future years.' : null }]);
+  if (it.financeCostReducer > 0 || it.financeCostsCarriedForward > 0) rows.push([`Mortgage interest tax credit (${fmt.pct(it.financeCostReliefRate, 0)} of ${money(it.financeCostReliefBase)})`, '− ' + money(it.financeCostReducer), { neg: true, mid: '', note: it.financeCostsCarriedForward > 0.5 ? `Credit limited to the lower of finance costs, property profit and your other taxable income. ${money(it.financeCostsCarriedForward)} of interest is carried forward to next year.` : (r.income.property.financeCostsBroughtForward > 0 ? `Includes ${money(r.income.property.financeCostsBroughtForward)} brought forward from earlier years.` : null) }]);
   rows.push(['Total income tax', money(it.total), { total: true, mid: money(r.allowances.taxable.total) }]);
   if (!rows.length) rows.push(['No income tax due', money(0), { mid: '' }]);
   card.append(el('div', { class: 'table-scroll' }, linesTable(rows, { header: ['Band', 'Amount', 'Tax'] })));

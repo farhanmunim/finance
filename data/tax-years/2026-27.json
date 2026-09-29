@@ -152,6 +152,10 @@
       "stepPercent": 1
     }
   },
+  "pensions": {
+    "annualAllowance": 60000,
+    "reliefMinimumGross": 3600
+  },
   "sources": [
     {
       "id": "income-tax-rates",
@@ -283,6 +287,15 @@
       "url": "https://www.gov.uk/guidance/changes-to-tax-relief-for-residential-landlords-how-its-worked-out-including-case-studies",
       "covers": [
         "Finance cost restriction (20% tax credit)"
+      ]
+    },
+    {
+      "id": "pension-relief",
+      "title": "Tax on your private pension contributions: tax relief",
+      "url": "https://www.gov.uk/tax-on-your-private-pension/pension-tax-relief",
+      "covers": [
+        "Relief limit (100% of earnings or £3,600)",
+        "Annual allowance"
       ]
     }
   ]

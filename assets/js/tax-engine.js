@@ -143,7 +143,9 @@ function calculateOnce(input = {}, rates) {
   let pensionGross = 0;
   if (method !== 'none') {
     pensionGross = pension.type === 'amount' ? num(pension.value) : salary * (num(pension.value) / 100);
-    if (pensionGross > grossPay) {
+    // A deduction from pay cannot exceed the pay; a relief-at-source contribution can (it is
+    // paid from your own money), so that is checked against the relief limit below instead.
+    if (method !== 'relief_at_source' && pensionGross > grossPay) {
       warnings.push('Pension contribution was capped at your gross pay.');
       pensionGross = grossPay;
     }
@@ -187,6 +189,7 @@ function calculateOnce(input = {}, rates) {
   const rent = num(prop.rentalIncome);
   const propExpenses = num(prop.expenses);
   const financeCosts = num(prop.financeCosts);
+  const financeCostsBroughtForward = num(prop.financeCostsBroughtForward); // unused relief from earlier years
   const usePropertyAllowance = prop.deduction === 'property_allowance';
   const propertyAllowanceUsed = usePropertyAllowance ? Math.min(it.propertyAllowance, rent) : 0;
   const propExpensesUsed = usePropertyAllowance ? 0 : Math.min(propExpenses, rent);
@@ -209,6 +212,19 @@ function calculateOnce(input = {}, rates) {
   const rasGross = rasGrossEmployment + sePensionGross;
   const adjustedNetIncome = Math.max(0, totalIncome - rasGross - giftAidGross);
 
+  // Pension relief limits: gross contributions above the higher of relevant earnings and £3,600
+  // get no relief, and the annual allowance (£60,000, ignoring carry forward and tapering) caps
+  // the total that can go in without a charge.
+  const relevantEarnings = grossPay + benefits + profit;
+  const memberGross = (method === 'salary_sacrifice' ? 0 : pensionGross) + sePensionGross;
+  const pn = rates.pensions || { annualAllowance: 60000, reliefMinimumGross: 3600 };
+  if (memberGross > Math.max(pn.reliefMinimumGross, relevantEarnings) + 0.5) {
+    warnings.push(`Tax relief on pension contributions is limited to 100% of your earnings (or £${pn.reliefMinimumGross.toLocaleString('en-GB')} gross if lower). Contributions above that get no relief - the calculation assumes they are within the limit.`);
+  }
+  if (pensionGross + sePensionGross > pn.annualAllowance + 0.5) {
+    warnings.push(`Pension contributions exceed the £${pn.annualAllowance.toLocaleString('en-GB')} annual allowance. Unless you have unused allowance from the previous three years, the excess is taxed as income (not modelled).`);
+  }
+
   const paStandard = it.personalAllowance;
   const paExcess = Math.max(0, adjustedNetIncome - it.personalAllowanceIncomeLimit);
   const paTaper = Math.min(paStandard, Math.floor(paExcess / 2));
@@ -216,17 +232,10 @@ function calculateOnce(input = {}, rates) {
   const blind = adj.blindPersonsAllowance ? it.blindPersonsAllowance : 0;
   const marriage = ['transfer', 'receive'].includes(adj.marriageAllowance) ? adj.marriageAllowance : 'none';
   const marriageTransfer = marriage === 'transfer' ? Math.min(it.marriageAllowanceTransfer, personalAllowance) : 0;
+  if (marriage === 'transfer' && totalIncome > paStandard + (region === 'scotland' ? it.bands.scotland[2].upTo : it.bands.ruk[0].upTo)) {
+    warnings.push('Marriage Allowance can only be transferred by someone who is not a higher-rate taxpayer. Your income looks too high to transfer it.');
+  }
   const allowanceTotal = personalAllowance + blind - marriageTransfer;
-
-  // Allowances against non-savings first, then savings, then dividends.
-  const allowNS = Math.min(allowanceTotal, nonSavings);
-  const allowSav = Math.min(allowanceTotal - allowNS, savings);
-  const allowDiv = Math.min(allowanceTotal - allowNS - allowSav, dividends);
-  const taxableNS = nonSavings - allowNS;
-  const taxableSav = savings - allowSav;
-  const taxableDiv = dividends - allowDiv;
-  const taxableTotal = taxableNS + taxableSav + taxableDiv;
-  const allowanceUnused = allowanceTotal - allowNS - allowSav - allowDiv;
 
   // ---------------------------------------------------------------- 5. Income tax
   const extension = rasGross + giftAidGross; // basic (and higher) rate limits extended
@@ -234,38 +243,62 @@ function calculateOnce(input = {}, rates) {
   // Scottish taxpayers: the starter rate limit is not extended; the limits above it are.
   const nsBands = region === 'scotland' ? buildBands(it.bands.scotland, extension, { extendFrom: 1 }) : ukBands;
 
-  const nsPieces = allocate(nsBands, 0, taxableNS, null, 'nonSavings');
-
-  // Savings: starting rate band (0%) reduced £1 for £1 by taxable non-savings income.
+  // Allowances go against non-savings income first. ITA 2007 s25(2) lets the rest be set against
+  // savings or dividends in whichever way gives the lowest tax, so every breakpoint of that split
+  // is evaluated and the cheapest is used.
+  const allowNS = Math.min(allowanceTotal, nonSavings);
+  const taxableNS = nonSavings - allowNS;
+  const remaining = allowanceTotal - allowNS;
   const startingRateAvail = Math.max(0, it.savings.startingRateBand - taxableNS);
-  const startingRateUsed = Math.min(startingRateAvail, taxableSav);
 
-  // Taxpayer level for the Personal Savings Allowance: the highest UK-wide rate any of the
-  // income reaches (Scottish higher/advanced/top rate income counts as higher/additional).
-  let level = 'basic';
-  const bump = (l) => { if (l === 'additional' || (l === 'higher' && level === 'basic')) level = l; };
-  if (taxableTotal > 0) bump(levelOfBand(bandAt(ukBands, Math.max(0, taxableTotal - 0.01)).id));
-  if (region === 'scotland' && taxableNS > 0) bump(levelOfBand(bandAt(nsBands, Math.max(0, taxableNS - 0.01)).id));
-  const psa = it.savings.personalSavingsAllowance[level];
-  const psaUsed = Math.min(psa, taxableSav - startingRateUsed);
+  const taxSavingsAndDividends = (allowSav) => {
+    const allowDiv = Math.min(remaining - allowSav, dividends);
+    const taxableSav = savings - allowSav;
+    const taxableDiv = dividends - allowDiv;
+    const taxableTotal = taxableNS + taxableSav + taxableDiv;
+    // Taxpayer level for the Personal Savings Allowance (ITA 2007 s12B): the highest UK-wide
+    // rate any of the income reaches, counting the 0% savings and dividend bands at their
+    // position. Scottish and Welsh taxpayers are assessed as if they were not (s12B(8)).
+    const level = taxableTotal > 0 ? levelOfBand(bandAt(ukBands, Math.max(0, taxableTotal - 0.01)).id) : 'basic';
+    const psa = it.savings.personalSavingsAllowance[level];
+    const startingRateUsed = Math.min(startingRateAvail, taxableSav);
+    const psaUsed = Math.min(psa, taxableSav - startingRateUsed);
+    const savPieces = [];
+    let pos = taxableNS;
+    if (startingRateUsed > 0) { savPieces.push({ id: 'starting', name: 'Starting rate for savings', rate: 0, amount: startingRateUsed, tax: 0, label: 'savings' }); pos += startingRateUsed; }
+    if (psaUsed > 0) { savPieces.push({ id: 'psa', name: 'Personal Savings Allowance', rate: 0, amount: psaUsed, tax: 0, label: 'savings' }); pos += psaUsed; }
+    const savTaxed = taxableSav - startingRateUsed - psaUsed;
+    if (savTaxed > 0) savPieces.push(...allocate(ukBands, pos, savTaxed, null, 'savings'));
+    pos += savTaxed;
+    // Dividends: allowance is a 0% band that still uses up band space.
+    const divPieces = [];
+    const divAllowUsed = Math.min(it.dividends.allowance, taxableDiv);
+    if (divAllowUsed > 0) { divPieces.push({ id: 'dividend-allowance', name: 'Dividend allowance', rate: 0, amount: divAllowUsed, tax: 0, label: 'dividends' }); pos += divAllowUsed; }
+    const divTaxed = taxableDiv - divAllowUsed;
+    if (divTaxed > 0) {
+      divPieces.push(...allocate(ukBands, pos, divTaxed, (b) => it.dividends.rates[levelOfBand(b.id)], 'dividends')
+        .map((p) => ({ ...p, name: `Dividend ${p.name.toLowerCase()}` })));
+    }
+    const tax = savPieces.reduce((a, p) => a + p.tax, 0) + divPieces.reduce((a, p) => a + p.tax, 0);
+    return { allowSav, allowDiv, taxableSav, taxableDiv, taxableTotal, level, psa, startingRateUsed, psaUsed, savPieces, divPieces, tax };
+  };
+  // Candidate splits: the default (savings first), all to dividends, and every point where a
+  // 0% band or a rate band boundary is crossed. Tax is piecewise linear between them.
+  const maxSav = Math.min(remaining, savings);
+  const minSav = Math.max(0, remaining - dividends);
+  const candidates = new Set([maxSav, minSav]); // default order first, so ties keep it
+  const addCand = (x) => { if (Number.isFinite(x) && x > minSav && x < maxSav) candidates.add(x); };
+  addCand(savings - startingRateAvail);
+  for (const p of Object.values(it.savings.personalSavingsAllowance)) addCand(savings - startingRateAvail - p);
+  addCand(remaining - (dividends - it.dividends.allowance));
+  for (const b of ukBands) if (b.to !== Infinity) { addCand(taxableNS + savings - b.to); addCand(taxableNS + savings + dividends - remaining - b.to); }
+  let best = null;
+  for (const x of candidates) { const r = taxSavingsAndDividends(x); if (!best || r.tax < best.tax - 0.005) best = r; }
+  const { allowSav, allowDiv, taxableSav, taxableDiv, taxableTotal, level, psa, startingRateUsed, psaUsed, savPieces, divPieces } = best;
+  const allowanceUnused = allowanceTotal - allowNS - allowSav - allowDiv;
+  const allowanceReordered = allowSav < maxSav - 0.005;
 
-  const savPieces = [];
-  let pos = taxableNS;
-  if (startingRateUsed > 0) { savPieces.push({ id: 'starting', name: 'Starting rate for savings', rate: 0, amount: startingRateUsed, tax: 0, label: 'savings' }); pos += startingRateUsed; }
-  if (psaUsed > 0) { savPieces.push({ id: 'psa', name: 'Personal Savings Allowance', rate: 0, amount: psaUsed, tax: 0, label: 'savings' }); pos += psaUsed; }
-  const savTaxed = taxableSav - startingRateUsed - psaUsed;
-  if (savTaxed > 0) savPieces.push(...allocate(ukBands, pos, savTaxed, null, 'savings'));
-  pos += savTaxed;
-
-  // Dividends: allowance is a 0% band that still uses up band space.
-  const divPieces = [];
-  const divAllowUsed = Math.min(it.dividends.allowance, taxableDiv);
-  if (divAllowUsed > 0) { divPieces.push({ id: 'dividend-allowance', name: 'Dividend allowance', rate: 0, amount: divAllowUsed, tax: 0, label: 'dividends' }); pos += divAllowUsed; }
-  const divTaxed = taxableDiv - divAllowUsed;
-  if (divTaxed > 0) {
-    divPieces.push(...allocate(ukBands, pos, divTaxed, (b) => it.dividends.rates[levelOfBand(b.id)], 'dividends')
-      .map((p) => ({ ...p, name: `Dividend ${p.name.toLowerCase()}` })));
-  }
+  const nsPieces = allocate(nsBands, 0, taxableNS, null, 'nonSavings');
 
   const sum = (arr) => arr.reduce((s, p) => s + p.tax, 0);
   const nonSavingsTax = sum(nsPieces);
@@ -284,9 +317,12 @@ function calculateOnce(input = {}, rates) {
   // property allowance. Unused amounts carry forward (not modelled).
   let financeCostReducer = 0;
   let financeCostReliefBase = 0;
-  if (financeCosts > 0 && !usePropertyAllowance) {
-    financeCostReliefBase = Math.min(financeCosts, propertyProfit, taxableNS);
+  const financeCostsAvailable = financeCosts + financeCostsBroughtForward;
+  let financeCostsCarriedForward = 0;
+  if (financeCostsAvailable > 0 && !usePropertyAllowance) {
+    financeCostReliefBase = Math.min(financeCostsAvailable, propertyProfit, taxableNS);
     financeCostReducer = Math.min(Math.max(0, taxBeforeReducers - marriageReducer), financeCostReliefBase * it.financeCostReliefRate);
+    financeCostsCarriedForward = financeCostsAvailable - financeCostReliefBase;
   } else if (financeCosts > 0 && usePropertyAllowance) {
     warnings.push('Mortgage interest relief cannot be claimed together with the property allowance, so it has not been applied.');
   }
@@ -396,7 +432,7 @@ function calculateOnce(input = {}, rates) {
     income: {
       employment: { salary, bonus, grossPay, taxableBenefits: benefits, expenses: empExpenses, payrollGiving, pensionMethod: method, pensionGross: r(pensionGross), pensionCash: r(pensionCash), taxablePay: r(taxablePay), niablePay: r(niablePay), taxableIncome: r(employmentIncome) },
       selfEmployment: { turnover, expenses, deduction: useTradingAllowance ? 'trading_allowance' : 'expenses', tradingAllowanceUsed: r(tradingAllowanceUsed), expensesUsed: r(expensesUsed), profit: r(profit), pensionPaid: r(sePensionPaid), pensionGross: r(sePensionGross) },
-      property: { rentalIncome: rent, expenses: propExpenses, financeCosts, deduction: usePropertyAllowance ? 'property_allowance' : 'expenses', propertyAllowanceUsed: r(propertyAllowanceUsed), expensesUsed: r(propExpensesUsed), profit: r(propertyProfit), cash: r(propertyCash) },
+      property: { rentalIncome: rent, expenses: propExpenses, financeCosts, financeCostsBroughtForward, deduction: usePropertyAllowance ? 'property_allowance' : 'expenses', propertyAllowanceUsed: r(propertyAllowanceUsed), expensesUsed: r(propExpensesUsed), profit: r(propertyProfit), cash: r(propertyCash) },
       savings, dividends, otherIncome,
       nonSavings: r(nonSavings), total: r(totalIncome), gross: r(grossIncome), cash: r(cashIncome),
     },
@@ -405,7 +441,7 @@ function calculateOnce(input = {}, rates) {
       adjustedNetIncome: r(adjustedNetIncome), giftAidGross: r(giftAidGross), reliefAtSourceGross: r(rasGross),
       taper: paTaper, personalAllowance, blindPersonsAllowance: blind, marriageAllowance: marriage, marriageTransfer,
       total: allowanceTotal, unused: r(allowanceUnused),
-      allocated: { nonSavings: r(allowNS), savings: r(allowSav), dividends: r(allowDiv) },
+      allocated: { nonSavings: r(allowNS), savings: r(allowSav), dividends: r(allowDiv) }, reordered: allowanceReordered,
       taxable: { nonSavings: r(taxableNS), savings: r(taxableSav), dividends: r(taxableDiv), total: r(taxableTotal) },
     },
     incomeTax: {
@@ -417,6 +453,7 @@ function calculateOnce(input = {}, rates) {
       dividends: { pieces: roundPieces(divPieces), tax: r(dividendTax), allowance: it.dividends.allowance },
       beforeReducers: r(taxBeforeReducers), marriageReducer: r(marriageReducer),
       financeCostReducer: r(financeCostReducer), financeCostReliefBase: r(financeCostReliefBase), financeCostReliefRate: it.financeCostReliefRate,
+      financeCostsAvailable: r(financeCostsAvailable), financeCostsCarriedForward: r(financeCostsCarriedForward),
       total: r(incomeTaxTotal),
     },
     nationalInsurance: {
