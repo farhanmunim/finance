@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Mortgage calculator - payments, interest and overpayments</title>
+  <meta name="description" content="Work out your monthly mortgage payment, total interest and how much overpaying would save. Repayment and interest-only, with fixed-rate periods.">
+  <link rel="stylesheet" href="/assets/css/style.css">
+  <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+</head>
+<body>
+  <header class="site-header">
+    <div class="inner">
+      <a class="brand" href="/"><span class="logo">£</span> UK Finance Tools</a>
+      <nav class="site-nav" aria-label="Tools">
+        <a href="/income/">Take-home pay</a>
+        <a href="/mortgage/" aria-current="page">Mortgage</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    <h1 class="page-title">Mortgage calculator</h1>
+    <p class="page-intro">See what your mortgage will cost each month and in total, then test what overpaying would save you in interest and time.</p>
+
+    <form id="form" class="tool-layout" autocomplete="off" novalidate>
+      <div class="inputs-col">
+        <div class="card">
+          <div class="card-header"><div><h2>The property and loan</h2><p>What you're buying and borrowing.</p></div></div>
+          <div class="stack">
+            <div class="row">
+              <div class="field">
+                <label for="price">Property value</label>
+                <div class="input-wrap"><span class="affix">£</span><input id="price" name="pv" data-money placeholder="e.g. 300,000"></div>
+              </div>
+              <div class="field">
+                <label for="deposit">Deposit</label>
+                <div class="input-wrap">
+                  <span class="affix" id="depAffix">£</span>
+                  <input id="deposit" name="dep" inputmode="decimal" placeholder="e.g. 30,000">
+                </div>
+                <div class="segmented mini" style="margin-top:8px" role="radiogroup" aria-label="Deposit entered as">
+                  <input type="radio" name="dt" id="dt-amount" value="amount" checked><label for="dt-amount">£</label>
+                  <input type="radio" name="dt" id="dt-percent" value="percent"><label for="dt-percent">% of value</label>
+                </div>
+              </div>
+            </div>
+            <div class="note-box" id="loan-note">Enter a property value and deposit to see your loan amount.</div>
+            <div class="row">
+              <div class="field">
+                <label for="term">Mortgage term</label>
+                <div class="input-wrap"><input id="term" name="t" type="number" min="1" max="40" step="1" value="25"><span class="affix suffix">years</span></div>
+              </div>
+              <div class="field">
+                <label for="rate">Interest rate</label>
+                <div class="input-wrap"><input id="rate" name="r" type="number" min="0" max="30" step="0.01" placeholder="e.g. 4.5"><span class="affix suffix">% a year</span></div>
+              </div>
+            </div>
+            <div class="field">
+              <span class="label">Mortgage type</span>
+              <div class="segmented block" role="radiogroup" aria-label="Mortgage type">
+                <input type="radio" name="type" id="type-rep" value="repayment" checked><label for="type-rep">Repayment</label>
+                <input type="radio" name="type" id="type-io" value="interest_only"><label for="type-io">Interest only</label>
+              </div>
+              <span class="hint" id="type-hint">Each payment covers interest and part of the loan, so it's fully repaid at the end of the term.</span>
+            </div>
+            <details class="explain" id="rate-period">
+              <summary>Initial rate period (fixed or tracker deal)</summary>
+              <div class="body stack">
+                <div class="row">
+                  <div class="field">
+                    <label for="fixedYears">Deal length</label>
+                    <div class="input-wrap"><input id="fixedYears" name="fy" type="number" min="0" max="40" step="1" placeholder="e.g. 5"><span class="affix suffix">years</span></div>
+                  </div>
+                  <div class="field">
+                    <label for="revertRate">Rate after the deal ends</label>
+                    <div class="input-wrap"><input id="revertRate" name="rr" type="number" min="0" max="30" step="0.01" placeholder="e.g. 7.5"><span class="affix suffix">%</span></div>
+                    <span class="hint">Usually the lender's standard variable rate. Leave blank to keep the same rate.</span>
+                  </div>
+                </div>
+              </div>
+            </details>
+            <label class="toggle" id="own-payment-toggle">
+              <span><span class="label">I know my monthly payment</span><span class="sub">Enter it and we'll work out how long the loan takes to clear</span></span>
+              <input type="checkbox" id="ownPayment" name="op" value="1"><span class="switch"></span>
+            </label>
+            <div class="field" id="payment-field" hidden>
+              <label for="payment">Monthly payment</label>
+              <div class="input-wrap"><span class="affix">£</span><input id="payment" name="pay" data-money="2" placeholder="e.g. 1,200"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header"><div><h2>Overpayments</h2><p>Optional. Most lenders allow 10% of the balance a year without a fee.</p></div></div>
+          <div class="stack">
+            <div class="row">
+              <div class="field">
+                <label for="monthlyOver">Extra each month</label>
+                <div class="input-wrap"><span class="affix">£</span><input id="monthlyOver" name="mo" data-money placeholder="0"></div>
+              </div>
+              <div class="field">
+                <label for="annualOver">Extra once a year</label>
+                <div class="input-wrap"><span class="affix">£</span><input id="annualOver" name="ao" data-money placeholder="0"></div>
+                <span class="hint">Paid at the end of each year.</span>
+              </div>
+            </div>
+            <div class="row">
+              <div class="field">
+                <label for="lumpSum">One-off lump sum</label>
+                <div class="input-wrap"><span class="affix">£</span><input id="lumpSum" name="ls" data-money placeholder="0"></div>
+              </div>
+              <div class="field">
+                <label for="lumpYear">Paid at the end of year</label>
+                <div class="input-wrap"><input id="lumpYear" name="ly" type="number" min="1" max="40" step="1" value="1"></div>
+              </div>
+            </div>
+            <div class="field" id="effect-field">
+              <span class="label">When I overpay, I want to</span>
+              <div class="segmented block" role="radiogroup" aria-label="Effect of overpaying">
+                <input type="radio" name="eff" id="eff-term" value="reduce_term" checked><label for="eff-term">Pay it off sooner</label>
+                <input type="radio" name="eff" id="eff-pay" value="reduce_payment"><label for="eff-pay">Lower my monthly payment</label>
+              </div>
+              <span class="hint">Paying it off sooner saves the most interest. Ask your lender which they do by default.</span>
+            </div>
+          </div>
+        </div>
+        <p class="muted small" style="margin-top:16px">Results update as you type. Your inputs are saved in the page address so you can bookmark or share them.</p>
+      </div>
+
+      <div class="results-col" id="results" aria-live="polite">
+        <div class="card"><p class="muted">Enter your property value, deposit and interest rate to see your payments.</p></div>
+      </div>
+    </form>
+  </main>
+
+  <div class="mobile-summary" id="mobile-summary" hidden>
+    <div><div class="k">Monthly payment</div><div class="v" id="ms-pay">£0</div></div>
+    <div style="text-align:right"><div class="k">Total interest</div><div class="v" id="ms-int">£0</div></div>
+  </div>
+
+  <footer class="site-footer">
+    <p>For guidance only. Lenders calculate interest daily and may round differently, so real figures can differ slightly. Your home may be repossessed if you do not keep up repayments on your mortgage.</p>
+  </footer>
+  <script type="module" src="/assets/js/mortgage.js"></script>
+</body>
+</html>

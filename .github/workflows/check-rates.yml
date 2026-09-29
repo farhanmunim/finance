@@ -1,0 +1,41 @@
+name: Check tax rates against GOV.UK
+# Runs on the 1st of every month (and on demand). If any stored figure no longer matches
+# GOV.UK, the job fails and an issue is opened with the details so the data file can be updated
+# with `npm run rates:update`.
+on:
+  schedule:
+    - cron: "17 6 1 * *"
+  workflow_dispatch:
+permissions:
+  contents: read
+  issues: write
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Compare stored rates with GOV.UK
+        id: check
+        run: |
+          set +e
+          node scripts/update-rates.mjs --check | tee check.log
+          echo "exit=${PIPESTATUS[0]}" >> "$GITHUB_OUTPUT"
+      - name: Open an issue if rates have changed
+        if: steps.check.outputs.exit != '0'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const log = fs.readFileSync('check.log', 'utf8').slice(-6000);
+            const title = 'Tax rates differ from GOV.UK';
+            const { data: issues } = await github.rest.issues.listForRepo({ owner: context.repo.owner, repo: context.repo.repo, state: 'open', labels: 'rates' });
+            const body = `The monthly check found that stored tax figures no longer match GOV.UK (or a page could not be read).\n\nRun \`npm run rates:update\`, review the diff in \`data/tax-years/\`, run \`npm test\` and commit.\n\n<details><summary>Check output</summary>\n\n\`\`\`\n${log}\n\`\`\`\n</details>`;
+            const existing = issues.find((i) => i.title === title);
+            if (existing) await github.rest.issues.createComment({ owner: context.repo.owner, repo: context.repo.repo, issue_number: existing.number, body });
+            else await github.rest.issues.create({ owner: context.repo.owner, repo: context.repo.repo, title, body, labels: ['rates'] });
+      - name: Fail the job if rates differ
+        if: steps.check.outputs.exit != '0'
+        run: exit 1

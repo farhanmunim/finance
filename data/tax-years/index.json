@@ -1,0 +1,7 @@
+{
+  "default": "2026-27",
+  "years": [
+    { "id": "2026-27", "label": "2026/27", "starts": "2026-04-06", "ends": "2027-04-05", "file": "/data/tax-years/2026-27.json" },
+    { "id": "2025-26", "label": "2025/26", "starts": "2025-04-06", "ends": "2026-04-05", "file": "/data/tax-years/2025-26.json" }
+  ]
+}

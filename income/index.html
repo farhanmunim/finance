@@ -1,0 +1,229 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Take-home pay calculator - UK income tax, National Insurance and student loan</title>
+  <meta name="description" content="Work out your UK take-home pay from employment and/or self-employment: income tax, National Insurance, student loan repayments and pension contributions, with every step shown.">
+  <link rel="stylesheet" href="/assets/css/style.css">
+  <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+</head>
+<body>
+  <header class="site-header">
+    <div class="inner">
+      <a class="brand" href="/"><span class="logo">£</span> UK Finance Tools</a>
+      <nav class="site-nav" aria-label="Tools">
+        <a href="/income/" aria-current="page">Take-home pay</a>
+        <a href="/mortgage/">Mortgage</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    <h1 class="page-title">Take-home pay calculator</h1>
+    <p class="page-intro">See how much income tax and National Insurance you'll pay and what you'll actually receive, whether you're employed, self-employed, or both. Every figure is worked through step by step below.</p>
+
+    <form id="form" class="tool-layout" autocomplete="off" novalidate>
+      <div class="inputs-col">
+        <div class="card">
+          <div class="card-header">
+            <div><h2>About you</h2><p>Pick the tax year and where you live.</p></div>
+          </div>
+          <div class="stack">
+            <div class="row">
+              <div class="field">
+                <label for="taxYear">Tax year</label>
+                <select id="taxYear" name="y" class="plain"></select>
+              </div>
+              <div class="field">
+                <span class="label">Where you live</span>
+                <div class="segmented block" role="radiogroup" aria-label="Region">
+                  <input type="radio" name="r" id="r-ruk" value="ruk" checked><label for="r-ruk">England, Wales or NI</label>
+                  <input type="radio" name="r" id="r-scot" value="scotland"><label for="r-scot">Scotland</label>
+                </div>
+              </div>
+            </div>
+            <div class="field">
+              <span class="label">How do you earn?</span>
+              <div class="segmented block" role="radiogroup" aria-label="Type of income">
+                <input type="radio" name="mode" id="m-emp" value="employed" checked><label for="m-emp">Employed</label>
+                <input type="radio" name="mode" id="m-self" value="self"><label for="m-self">Self-employed</label>
+                <input type="radio" name="mode" id="m-both" value="both"><label for="m-both">Both</label>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card" id="sec-employment">
+          <div class="card-header">
+            <div><h2>Employment</h2><p>Your salary before any deductions.</p></div>
+          </div>
+          <div class="stack">
+            <div class="row">
+              <div class="field">
+                <label for="salary">Annual salary</label>
+                <div class="input-wrap"><span class="affix">£</span><input id="salary" name="sal" data-money placeholder="e.g. 45,000"></div>
+              </div>
+              <div class="field">
+                <label for="bonus">Bonus <span class="muted">(optional)</span></label>
+                <div class="input-wrap"><span class="affix">£</span><input id="bonus" name="bon" data-money placeholder="0"></div>
+              </div>
+            </div>
+            <div class="field">
+              <label for="pensionMethod">Workplace pension</label>
+              <select id="pensionMethod" name="pm" class="plain">
+                <option value="none">No pension contributions</option>
+                <option value="salary_sacrifice">Salary sacrifice (saves tax and NI)</option>
+                <option value="net_pay">Deducted before tax ("net pay")</option>
+                <option value="relief_at_source">Deducted after tax ("relief at source")</option>
+              </select>
+              <span class="hint">Not sure? Most workplace schemes are "net pay" or "relief at source". Your payslip or pension provider will say which. Salary sacrifice is usually described as "salary exchange".</span>
+            </div>
+            <div class="row" id="pension-row" hidden>
+              <div class="field">
+                <label for="pensionValue">Your contribution</label>
+                <div class="input-wrap">
+                  <span class="affix" id="pensionAffix">%</span>
+                  <input id="pensionValue" name="pv" inputmode="decimal" placeholder="5">
+                </div>
+                <span class="hint" id="pensionHint">Percentage of salary, before tax relief.</span>
+              </div>
+              <div class="field">
+                <span class="label">Entered as</span>
+                <div class="segmented block" role="radiogroup" aria-label="Contribution type">
+                  <input type="radio" name="pt" id="pt-percent" value="percent" checked><label for="pt-percent">% of salary</label>
+                  <input type="radio" name="pt" id="pt-amount" value="amount"><label for="pt-amount">£ per year</label>
+                </div>
+              </div>
+            </div>
+            <details class="explain">
+              <summary>More employment options</summary>
+              <div class="body stack">
+                <div class="field">
+                  <label for="benefits">Taxable benefits in kind</label>
+                  <div class="input-wrap"><span class="affix">£</span><input id="benefits" name="ben" data-money placeholder="0"></div>
+                  <span class="hint">The taxable value of things like a company car or private medical insurance (from your P11D). Taxed but not paid to you as cash.</span>
+                </div>
+              </div>
+            </details>
+          </div>
+        </div>
+
+        <div class="card" id="sec-self" hidden>
+          <div class="card-header">
+            <div><h2>Self-employment</h2><p>Sole trader income reported on Self Assessment.</p></div>
+          </div>
+          <div class="stack">
+            <div class="row">
+              <div class="field">
+                <label for="turnover">Income (turnover)</label>
+                <div class="input-wrap"><span class="affix">£</span><input id="turnover" name="to" data-money placeholder="e.g. 40,000"></div>
+                <span class="hint">Total invoiced / received in the year, before costs.</span>
+              </div>
+              <div class="field">
+                <label for="expenses">Allowable expenses</label>
+                <div class="input-wrap"><span class="affix">£</span><input id="expenses" name="ex" data-money placeholder="0"></div>
+                <span class="hint">Business costs you can deduct.</span>
+              </div>
+            </div>
+            <div class="field">
+              <span class="label">Deduct from income</span>
+              <div class="segmented block" role="radiogroup" aria-label="Deduction method">
+                <input type="radio" name="ded" id="ded-exp" value="expenses" checked><label for="ded-exp">Actual expenses</label>
+                <input type="radio" name="ded" id="ded-ta" value="trading_allowance"><label for="ded-ta">£1,000 trading allowance</label>
+              </div>
+              <span class="hint">You can use the trading allowance instead of expenses, which is simpler if your costs are under £1,000.</span>
+            </div>
+            <div class="field">
+              <label for="sePension">Personal pension contributions <span class="muted">(optional)</span></label>
+              <div class="input-wrap"><span class="affix">£</span><input id="sePension" name="sep" data-money placeholder="0"></div>
+              <span class="hint">The amount you pay in each year. Your provider adds 20% basic-rate relief on top, and higher-rate relief comes through your tax bill.</span>
+            </div>
+          </div>
+        </div>
+
+        <details class="section" id="sec-other">
+          <summary><span>Other income<span class="sub">Savings interest, dividends, rental and other income</span></span></summary>
+          <div class="body stack">
+            <div class="row">
+              <div class="field">
+                <label for="savings">Savings interest</label>
+                <div class="input-wrap"><span class="affix">£</span><input id="savings" name="sav" data-money placeholder="0"></div>
+                <span class="hint">Interest outside ISAs.</span>
+              </div>
+              <div class="field">
+                <label for="dividends">Dividends</label>
+                <div class="input-wrap"><span class="affix">£</span><input id="dividends" name="div" data-money placeholder="0"></div>
+                <span class="hint">From shares or your own company.</span>
+              </div>
+            </div>
+            <div class="field">
+              <label for="otherIncome">Other taxable income</label>
+              <div class="input-wrap"><span class="affix">£</span><input id="otherIncome" name="oth" data-money placeholder="0"></div>
+              <span class="hint">For example rental profits or a taxable pension. Taxed like earnings but with no National Insurance.</span>
+            </div>
+          </div>
+        </details>
+
+        <div class="card" id="sec-loans">
+          <div class="card-header">
+            <div><h2>Student loan</h2><p>Select every plan you're repaying.</p></div>
+          </div>
+          <div class="chips" id="loan-chips">
+            <input type="checkbox" name="sl" id="sl-plan1" value="plan1"><label for="sl-plan1">Plan 1</label>
+            <input type="checkbox" name="sl" id="sl-plan2" value="plan2"><label for="sl-plan2">Plan 2</label>
+            <input type="checkbox" name="sl" id="sl-plan4" value="plan4"><label for="sl-plan4">Plan 4 (Scotland)</label>
+            <input type="checkbox" name="sl" id="sl-plan5" value="plan5"><label for="sl-plan5">Plan 5</label>
+            <input type="checkbox" name="sl" id="sl-pg" value="postgraduate"><label for="sl-pg">Postgraduate</label>
+          </div>
+          <p class="hint muted small" style="margin-top:10px">Started an English or Welsh undergraduate course in or after 2023? That's Plan 5. Between 2012 and 2022? Plan 2. Before 2012? Plan 1. Scottish students are on Plan 4. <a href="https://www.gov.uk/repaying-your-student-loan/which-repayment-plan-you-are-on" target="_blank" rel="noopener">Check on GOV.UK</a>.</p>
+        </div>
+
+        <details class="section" id="sec-adjust">
+          <summary><span>Other adjustments<span class="sub">Gift Aid, Marriage Allowance, Blind Person's Allowance, Child Benefit</span></span></summary>
+          <div class="body stack">
+            <div class="field">
+              <label for="giftAid">Gift Aid donations</label>
+              <div class="input-wrap"><span class="affix">£</span><input id="giftAid" name="ga" data-money placeholder="0"></div>
+              <span class="hint">What you actually gave in the year. Extends your basic-rate band, which matters if you pay higher-rate tax.</span>
+            </div>
+            <div class="field">
+              <label for="marriage">Marriage Allowance</label>
+              <select id="marriage" name="ma" class="plain">
+                <option value="none">Not claimed</option>
+                <option value="receive">I receive it from my partner</option>
+                <option value="transfer">I transfer it to my partner</option>
+              </select>
+            </div>
+            <label class="toggle">
+              <span><span class="label">Blind Person's Allowance</span><span class="sub">Registered blind or severely sight impaired</span></span>
+              <input type="checkbox" id="blind" name="bpa" value="1"><span class="switch"></span>
+            </label>
+            <div class="field">
+              <label for="children">Children you claim Child Benefit for</label>
+              <div class="input-wrap"><input id="children" name="ch" type="number" min="0" max="20" step="1" placeholder="0"></div>
+              <span class="hint">Used for the High Income Child Benefit Charge if your income is over £60,000.</span>
+            </div>
+          </div>
+        </details>
+
+        <p class="muted small" style="margin-top:16px">Results update as you type. Your inputs are saved in the page address so you can bookmark or share them.</p>
+      </div>
+
+      <div class="results-col" id="results" aria-live="polite">
+        <div class="card"><p class="muted">Loading tax rates…</p></div>
+      </div>
+    </form>
+  </main>
+
+  <div class="mobile-summary" id="mobile-summary" hidden>
+    <div><div class="k">Take-home per month</div><div class="v" id="ms-month">£0</div></div>
+    <div style="text-align:right"><div class="k">Per year</div><div class="v" id="ms-year">£0</div></div>
+  </div>
+
+  <footer class="site-footer">
+    <p>Figures are based on published GOV.UK rates and are for guidance only. Always check your own position with HMRC or a qualified adviser.</p>
+  </footer>
+  <script type="module" src="/assets/js/income.js"></script>
+</body>
+</html>

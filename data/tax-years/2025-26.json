@@ -1,0 +1,74 @@
+{
+  "taxYear": "2025-26",
+  "label": "2025/26",
+  "starts": "2025-04-06",
+  "ends": "2026-04-05",
+  "verified": "2026-09-29",
+  "incomeTax": {
+    "personalAllowance": 12570,
+    "personalAllowanceIncomeLimit": 100000,
+    "blindPersonsAllowance": 3130,
+    "marriageAllowanceTransfer": 1260,
+    "tradingAllowance": 1000,
+    "basicRate": 0.20,
+    "bands": {
+      "ruk": [
+        { "id": "basic", "name": "Basic rate", "rate": 0.20, "upTo": 37700 },
+        { "id": "higher", "name": "Higher rate", "rate": 0.40, "upTo": 125140 },
+        { "id": "additional", "name": "Additional rate", "rate": 0.45, "upTo": null }
+      ],
+      "scotland": [
+        { "id": "starter", "name": "Starter rate", "rate": 0.19, "upTo": 2827 },
+        { "id": "basic", "name": "Basic rate", "rate": 0.20, "upTo": 14921 },
+        { "id": "intermediate", "name": "Intermediate rate", "rate": 0.21, "upTo": 31092 },
+        { "id": "higher", "name": "Higher rate", "rate": 0.42, "upTo": 62430 },
+        { "id": "advanced", "name": "Advanced rate", "rate": 0.45, "upTo": 125140 },
+        { "id": "top", "name": "Top rate", "rate": 0.48, "upTo": null }
+      ]
+    },
+    "savings": {
+      "startingRateBand": 5000,
+      "personalSavingsAllowance": { "basic": 1000, "higher": 500, "additional": 0 }
+    },
+    "dividends": {
+      "allowance": 500,
+      "rates": { "basic": 0.0875, "higher": 0.3375, "additional": 0.3935 }
+    }
+  },
+  "nationalInsurance": {
+    "class1": {
+      "lowerEarningsLimit": 6500,
+      "primaryThreshold": 12570,
+      "upperEarningsLimit": 50270,
+      "secondaryThreshold": 5000,
+      "employeeMainRate": 0.08,
+      "employeeUpperRate": 0.02,
+      "employerRate": 0.15,
+      "employmentAllowance": 10500
+    },
+    "class2": { "smallProfitsThreshold": 6845, "weeklyRate": 3.50, "weeksInYear": 52, "compulsory": false },
+    "class4": { "lowerProfitsLimit": 12570, "upperProfitsLimit": 50270, "mainRate": 0.06, "upperRate": 0.02 }
+  },
+  "studentLoans": {
+    "plan1": { "name": "Plan 1", "threshold": 26065, "rate": 0.09 },
+    "plan2": { "name": "Plan 2", "threshold": 28470, "rate": 0.09 },
+    "plan4": { "name": "Plan 4", "threshold": 32745, "rate": 0.09 },
+    "plan5": { "name": "Plan 5", "threshold": 25000, "rate": 0.09 },
+    "postgraduate": { "name": "Postgraduate Loan", "threshold": 21000, "rate": 0.06 },
+    "unearnedIncomeLimit": 2000
+  },
+  "childBenefit": {
+    "weeklyEldest": 26.05,
+    "weeklyOther": 17.25,
+    "hicbc": { "threshold": 60000, "fullWithdrawal": 80000, "stepPounds": 200, "stepPercent": 1 }
+  },
+  "sources": [
+    { "id": "income-tax-rates", "title": "Income Tax rates and Personal Allowances (previous year section)", "url": "https://www.gov.uk/income-tax-rates/previous-tax-years", "covers": ["Personal Allowance", "rUK income tax bands"] },
+    { "id": "employer-rates-2025-26", "title": "Rates and thresholds for employers 2025 to 2026", "url": "https://www.gov.uk/guidance/rates-and-thresholds-for-employers-2025-to-2026", "covers": ["PAYE bands (England, Wales, NI, Scotland)", "Class 1 NI thresholds and rates", "Employer NI", "Student loan thresholds"] },
+    { "id": "ni-rates-allowances", "title": "Rates and allowances: National Insurance contributions", "url": "https://www.gov.uk/government/publications/rates-and-allowances-national-insurance-contributions/rates-and-allowances-national-insurance-contributions", "covers": ["Class 2 small profits threshold and rate", "Class 4 limits and rates"] },
+    { "id": "it-rates-allowances", "title": "Income Tax rates and allowances for current and previous tax years", "url": "https://www.gov.uk/government/publications/rates-and-allowances-income-tax/income-tax-rates-and-allowances-current-and-past", "covers": ["Blind Person's Allowance", "Dividend allowance", "Dividend rates", "Starting rate for savings"] },
+    { "id": "student-loan-repayment", "title": "Repaying your student loan", "url": "https://www.gov.uk/repaying-your-student-loan/what-you-pay", "covers": ["Student loan plan thresholds and rates"] },
+    { "id": "child-benefit", "title": "Child Benefit rates", "url": "https://www.gov.uk/government/publications/rates-and-allowances-tax-credits-child-benefit-and-guardians-allowance/tax-credits-child-benefit-and-guardians-allowance", "covers": ["Child Benefit weekly rates"] },
+    { "id": "hicbc", "title": "High Income Child Benefit Charge", "url": "https://www.gov.uk/child-benefit-tax-charge", "covers": ["HICBC thresholds"] }
+  ]
+}
