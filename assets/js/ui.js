@@ -106,8 +106,13 @@ export function debounce(fn, ms = 120) {
   return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); };
 }
 
+// Stamped by scripts/stamp-assets.mjs; changes whenever the tax-year data changes so that
+// browsers never pair new code with cached old data.
+export const DATA_VERSION = 'fe33481113';
+
 export async function loadJSON(url) {
-  const res = await fetch(url, { cache: 'no-cache' });
+  const versioned = DATA_VERSION && url.startsWith('/data/') ? `${url}${url.includes('?') ? '&' : '?'}v=${DATA_VERSION}` : url;
+  const res = await fetch(versioned);
   if (!res.ok) throw new Error(`Could not load ${url} (${res.status})`);
   return res.json();
 }

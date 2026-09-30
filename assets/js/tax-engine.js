@@ -100,8 +100,21 @@ function levelOfBand(id) {
  * @param {object} input see README for the shape; every field is optional.
  * @param {object} rates a tax-year JSON object.
  */
+/** Fill in fields added to the tax-year data after launch, so older data files still work. */
+export function withDefaults(rates) {
+  const it = { propertyAllowance: 1000, financeCostReliefRate: 0.2, tradingAllowance: 1000, basicRate: 0.2, ...rates.incomeTax };
+  it.rentARoom = it.rentARoom || { threshold: 7500, sharedThreshold: 3750 };
+  return {
+    ...rates,
+    incomeTax: it,
+    pensions: rates.pensions || { annualAllowance: 60000, reliefMinimumGross: 3600 },
+    selfAssessment: rates.selfAssessment || { paymentsOnAccountMinimum: 1000, collectedAtSourceShare: 0.8 },
+  };
+}
+
 export function calculate(input = {}, rates) {
   if (!rates) throw new Error('rates are required');
+  rates = withDefaults(rates);
   const seAuto = num(input.selfEmployment?.turnover) > 0 && !['expenses', 'trading_allowance'].includes(input.selfEmployment?.deduction);
   const prAuto = num(input.property?.rentalIncome) > 0 && !['expenses', 'property_allowance'].includes(input.property?.deduction);
   if (seAuto || prAuto) {

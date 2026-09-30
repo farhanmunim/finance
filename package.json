@@ -5,7 +5,9 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "pretest": "node scripts/stamp-assets.mjs --check",
     "test": "node --test tests/*.test.mjs",
+    "stamp": "node scripts/stamp-assets.mjs",
     "rates:check": "node scripts/update-rates.mjs --check",
     "rates:update": "node scripts/update-rates.mjs --write",
     "serve": "node scripts/serve.mjs"
