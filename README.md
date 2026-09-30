@@ -75,6 +75,10 @@ Analysis on top of the schedule:
 - **Loan-to-value tiers.** Extra deposit needed to reach 95/90/85/80/75/60% LTV.
 - **Buy-to-let.** The tax on the rent is the difference between the full income-tax calculation with and without the property, given the user's other income and region, so the Personal Allowance, band straddling, the allowance taper, Scottish rates and the finance-cost credit caps are all applied. The property allowance is used instead of costs when that is cheaper. Shows cash after mortgage and tax, gross yield, and the extra tax versus full deductibility.
 
+## Design
+
+The look is benchmarked on app-blueprint.farhan.app: a shadcn-style neutral palette (near-black primary, zinc greys, 1px borders, 6–8px radii, subtle shadows), Geist type (self-hosted in `assets/fonts/`, so no third-party font requests), compact 40px controls, uppercase 11px section labels, a dotted canvas background and a slim footer. Tokens live at the top of `assets/css/style.css` as HSL triplets, so a dark theme can be added by redefining them.
+
 ## Project layout
 
 ```
