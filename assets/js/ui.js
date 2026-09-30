@@ -135,9 +135,22 @@ export function debounce(fn, ms = 120) {
 // browsers never pair new code with cached old data.
 export const DATA_VERSION = 'fe33481113';
 
-export async function loadJSON(url) {
+/** Fetch JSON with a timeout and one retry, so a stalled request cannot leave the page loading forever. */
+export async function loadJSON(url, { timeoutMs = 10000, retries = 1 } = {}) {
   const versioned = DATA_VERSION && url.startsWith('/data/') ? `${url}${url.includes('?') ? '&' : '?'}v=${DATA_VERSION}` : url;
-  const res = await fetch(versioned);
-  if (!res.ok) throw new Error(`Could not load ${url} (${res.status})`);
-  return res.json();
+  let lastError;
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), timeoutMs);
+    try {
+      const res = await fetch(versioned, { signal: ctrl.signal });
+      if (!res.ok) throw new Error(`Could not load ${url} (${res.status})`);
+      return await res.json();
+    } catch (e) {
+      lastError = e.name === 'AbortError' ? new Error(`Loading ${url} timed out`) : e;
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+  throw lastError;
 }
