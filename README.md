@@ -4,7 +4,7 @@ Two small, fast calculators built with plain HTML, CSS and JavaScript. No framew
 
 | Tool | Path | What it does |
 | --- | --- | --- |
-| Take-home pay | `/income/` | Income tax, National Insurance, student loan and pension deductions for employees, the self-employed, or both, plus property income, Child Benefit and every rate editable, with each step shown. |
+| Income tax | `/income/` | Income tax, National Insurance, student loan and pension deductions for employees, the self-employed, or both, plus property income, Child Benefit and every rate editable, with each step shown. |
 | Mortgage | `/mortgage/` | Monthly payment, total interest, fixed-rate periods, interest-only, overpayments, overpay-vs-save break-even, rate sensitivity, LTV tiers and buy-to-let tax. |
 
 ## Deploying to Cloudflare Pages
