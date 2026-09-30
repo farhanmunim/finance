@@ -1,6 +1,6 @@
 import { amortise, compare, overpayVsSave, breakEvenSavingsRate, rateSensitivity, ltvBands } from './mortgage-engine.js?v=61f5bba74e';
 import { propertyIncrementalTax } from './tax-engine.js?v=fdea76ad1f';
-import { fmt, parseNum, initMoneyInputs, $, $$, el, linesTable, urlState, debounce, loadJSON } from './ui.js?v=4673fe000f';
+import { fmt, parseNum, initMoneyInputs, initNumberInputs, $, $$, el, linesTable, urlState, debounce, loadJSON } from './ui.js?v=1c3761c698';
 
 const form = $('#form');
 const results = $('#results');
@@ -12,6 +12,7 @@ async function init() {
   restoreFromUrl();
   loadRates().then(() => render());
   initMoneyInputs(form);
+  initNumberInputs(form);
   const rerender = debounce(() => { syncVisibility(); render(); }, 80);
   form.addEventListener('input', rerender);
   form.addEventListener('change', (e) => { if (e.target.matches('input:not([type=radio]):not([type=checkbox])')) return; syncVisibility(); render(); });

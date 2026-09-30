@@ -1,5 +1,5 @@
 import { calculate, marginalRate, applyOverrides } from './tax-engine.js?v=fdea76ad1f';
-import { fmt, parseNum, initMoneyInputs, $, $$, el, linesTable, urlState, debounce, loadJSON } from './ui.js?v=4673fe000f';
+import { fmt, parseNum, initMoneyInputs, initNumberInputs, $, $$, el, linesTable, urlState, debounce, loadJSON } from './ui.js?v=1c3761c698';
 
 const state = { index: null, rates: {}, period: 'year', overrides: {}, editorKey: '' };
 const form = $('#form');
@@ -23,6 +23,7 @@ async function init() {
     sel.value = state.index.default;
     restoreFromUrl();
     initMoneyInputs(form);
+    initNumberInputs(form);
     bindEvents();
     await ensureRates(sel.value);
     syncVisibility();
@@ -645,6 +646,7 @@ function onRateEdit(e) {
   const path = input.dataset.path, type = input.dataset.type;
   const raw = input.value.trim();
   const baseVal = input.dataset.base === '' ? null : Number(input.dataset.base);
+  if (raw !== '' && !/^[£\d.,\s]+$/.test(raw)) { input.value = fmtRateValue(state.overrides[path] != null ? Number(state.overrides[path]) : baseVal, type); return; }
   let v = raw === '' ? null : parseNum(raw);
   if (v != null && type === 'pct') v = Math.min(0.99, Math.max(0, Math.round(v * 100) / 10000));
   if (v != null && type !== 'pct') v = Math.max(0, v);

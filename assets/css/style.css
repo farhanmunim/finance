@@ -171,17 +171,17 @@ details.section > .body { padding: 4px var(--space-3) var(--space-3); }
 .hero { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 9rem), 1fr)); gap: var(--space-2); }
 .hero .tile { background: var(--surface-2); border-radius: var(--radius-sm); padding: var(--space-2) var(--space-3); min-width: 0; display: grid; grid-template-rows: auto auto 1fr; }
 .hero .tile.primary { background: var(--accent-soft); }
-.hero .tile .k { font-size: 0.75rem; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: .04em; }
+.hero .tile .k { font-size: 0.75rem; color: var(--text-2); font-weight: 600; text-transform: uppercase; letter-spacing: .04em; }
 .hero .tile .v { font-size: clamp(1.25rem, 1rem + 1.2vw, 1.6rem); font-weight: 700; letter-spacing: -0.02em; margin-top: 2px; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
 .hero .tile.primary .v { color: var(--accent-text); }
 .hero .tile.loss { background: var(--warn-soft); }
 .hero .tile.loss .v { color: var(--warn); }
-.hero .tile .s { font-size: 0.78rem; color: var(--muted); margin-top: 2px; align-self: start; }
+.hero .tile .s { font-size: 0.78rem; color: var(--text-2); margin-top: 2px; align-self: start; }
 .stat-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 9rem), 1fr)); gap: var(--space-2); }
 .stat { background: var(--surface-2); border-radius: var(--radius-sm); padding: var(--space-2); min-width: 0; display: grid; grid-template-rows: auto auto 1fr; }
-.stat .k { font-size: 0.75rem; color: var(--muted); font-weight: 600; }
+.stat .k { font-size: 0.75rem; color: var(--text-2); font-weight: 600; }
 .stat .v { font-size: var(--text-lg); font-weight: 700; font-variant-numeric: tabular-nums; margin-top: 2px; overflow-wrap: anywhere; }
-.stat .s { font-size: 0.75rem; color: var(--muted); align-self: start; }
+.stat .s { font-size: 0.75rem; color: var(--text-2); align-self: start; }
 /* Line up label, value and subtext across tiles in the same row */
 @supports (grid-template-rows: subgrid) {
   .hero .tile { grid-row: span 3; grid-template-rows: subgrid; row-gap: 0; }

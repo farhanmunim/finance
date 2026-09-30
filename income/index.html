@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Income Tax Calculator - UK take-home pay, self-employed and landlord tax</title>
   <meta name="description" content="Free UK income tax calculator: take-home pay, self-employment, property income, dividends, pensions, student loans and National Insurance, with every step of the calculation shown.">
-  <link rel="stylesheet" href="/assets/css/style.css?v=c82acf98b6">
+  <link rel="stylesheet" href="/assets/css/style.css?v=8398c158e0">
   <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
   <script defer src="https://mochi.farhan.app/script.js" data-website-id="f43f5c82-286b-40d3-9101-30af20fb7742" data-exclude-search="true"></script>
 </head>
@@ -80,9 +80,9 @@
               <label for="pensionMethod">Workplace pension</label>
               <select id="pensionMethod" name="pm" class="plain">
                 <option value="none">No pension contributions</option>
-                <option value="salary_sacrifice">Salary sacrifice (saves tax and NI)</option>
-                <option value="net_pay">Deducted before tax ("net pay")</option>
-                <option value="relief_at_source">Deducted after tax ("relief at source")</option>
+                <option value="salary_sacrifice">Salary sacrifice</option>
+                <option value="net_pay">Net pay (taken before tax)</option>
+                <option value="relief_at_source">Relief at source (after tax)</option>
               </select>
               <span class="hint">Not sure? Most workplace schemes are "net pay" or "relief at source". Your payslip or pension provider will say which. Salary sacrifice is usually described as "salary exchange".</span>
             </div>
@@ -148,7 +148,7 @@
               <div class="segmented block" role="radiogroup" aria-label="Deduction method">
                 <input type="radio" name="ded" id="ded-auto" value="auto" checked><label for="ded-auto">Automatic</label>
                 <input type="radio" name="ded" id="ded-exp" value="expenses"><label for="ded-exp">Expenses</label>
-                <input type="radio" name="ded" id="ded-ta" value="trading_allowance"><label for="ded-ta">£1,000 allowance</label>
+                <input type="radio" name="ded" id="ded-ta" value="trading_allowance"><label for="ded-ta">£1k allowance</label>
               </div>
               <span class="hint">You can claim the £1,000 trading allowance instead of expenses. "Automatic" uses whichever leaves you with less tax.</span>
             </div>
@@ -218,7 +218,7 @@
               <div class="segmented block" role="radiogroup" aria-label="Property deduction method">
                 <input type="radio" name="pded" id="pded-auto" value="auto" checked><label for="pded-auto">Automatic</label>
                 <input type="radio" name="pded" id="pded-exp" value="expenses"><label for="pded-exp">Expenses</label>
-                <input type="radio" name="pded" id="pded-pa" value="property_allowance"><label for="pded-pa">£1,000 allowance</label>
+                <input type="radio" name="pded" id="pded-pa" value="property_allowance"><label for="pded-pa">£1k allowance</label>
               </div>
               <span class="hint">The £1,000 property allowance replaces all expenses and the mortgage interest credit. "Automatic" uses whichever leaves you with less tax.</span>
             </div>
@@ -353,6 +353,6 @@
   <footer class="site-footer">
     <p>Figures are based on published GOV.UK rates and are for guidance only. Always check your own position with HMRC or a qualified adviser.</p>
   </footer>
-  <script type="module" src="/assets/js/income.js?v=d6b205e49c"></script>
+  <script type="module" src="/assets/js/income.js?v=6416981208"></script>
 </body>
 </html>

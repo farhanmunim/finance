@@ -19,7 +19,9 @@ export const fmt = {
 };
 
 export function parseNum(v) {
-  const n = parseFloat(String(v ?? '').replace(/[^0-9.\-]/g, ''));
+  const cleaned = String(v ?? '').replace(/[£,\s]/g, '');
+  if (cleaned === '' || !/^-?\d*\.?\d+(e[+-]?\d+)?$/i.test(cleaned)) return 0; // junk such as "abc" counts as nothing
+  const n = Number(cleaned);
   return Number.isFinite(n) ? n : 0;
 }
 
@@ -29,7 +31,7 @@ export function initMoneyInputs(root = document) {
     input.setAttribute('inputmode', 'decimal');
     input.setAttribute('autocomplete', 'off');
     const format = () => {
-      const n = parseNum(input.value);
+      const n = Math.max(0, parseNum(input.value)); // money is never negative
       if (input.value.trim() === '' || n === 0) { input.value = input.value.trim() === '' ? '' : '0'; return; }
       const dp = input.dataset.money === '2' ? 2 : 0;
       input.value = n.toLocaleString('en-GB', { minimumFractionDigits: dp, maximumFractionDigits: 2 });
@@ -37,6 +39,20 @@ export function initMoneyInputs(root = document) {
     input.addEventListener('blur', format);
     input.addEventListener('focus', () => { if (parseNum(input.value) === 0) input.select(); });
     if (input.value) format();
+  });
+}
+
+/** Number inputs with min/max: show the clamped value rather than silently using a different one. */
+export function initNumberInputs(root = document) {
+  root.querySelectorAll('input[type="number"]').forEach((input) => {
+    input.addEventListener('blur', () => {
+      if (input.value.trim() === '') return;
+      let n = Number(input.value);
+      if (!Number.isFinite(n)) { input.value = ''; return; }
+      if (input.min !== '' && n < Number(input.min)) n = Number(input.min);
+      if (input.max !== '' && n > Number(input.max)) n = Number(input.max);
+      if (String(n) !== input.value) { input.value = String(n); input.dispatchEvent(new Event('input', { bubbles: true })); }
+    });
   });
 }
 
