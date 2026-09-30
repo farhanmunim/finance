@@ -160,6 +160,10 @@
     "annualAllowance": 60000,
     "reliefMinimumGross": 3600
   },
+  "selfAssessment": {
+    "paymentsOnAccountMinimum": 1000,
+    "collectedAtSourceShare": 0.8
+  },
   "sources": [
     {
       "id": "income-tax-rates",
@@ -259,6 +263,14 @@
         "Replacement of domestic items relief",
         "Property losses",
         "Joint ownership"
+      ]
+    },
+    {
+      "id": "sa-poa",
+      "title": "Understand your Self Assessment tax bill: payments on account",
+      "url": "https://www.gov.uk/understand-self-assessment-bill/payments-on-account",
+      "covers": [
+        "Payments on account rules"
       ]
     }
   ]

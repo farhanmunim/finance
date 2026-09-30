@@ -120,16 +120,16 @@ select.plain:focus { outline: 0; border-color: var(--accent); box-shadow: 0 0 0 
 /* Segmented control: wraps to as many lines as needed, never overflows */
 .segmented { display: inline-flex; flex-wrap: wrap; background: var(--surface-2); border-radius: 12px; padding: 3px; gap: 3px; max-width: 100%; }
 .segmented.block { display: flex; }
-.segmented.block label { flex: 1 1 0; min-width: 6.5rem; text-align: center; }
+.segmented.block label { flex: 1 1 0; min-width: 5.5rem; padding-left: 8px; padding-right: 8px; font-size: 0.85rem; text-align: center; }
 .segmented input { position: absolute; opacity: 0; pointer-events: none; }
-.segmented label { display: flex; align-items: center; justify-content: center; min-height: 38px; padding: 6px 12px; border-radius: 9px; font-size: var(--text-sm); font-weight: 500; color: var(--text-2); cursor: pointer; line-height: 1.25; transition: background .15s, color .15s; }
+.segmented label { margin: 0; display: flex; align-items: center; justify-content: center; min-height: 40px; padding: 6px 12px; border-radius: 9px; font-size: var(--text-sm); font-weight: 500; color: var(--text-2); cursor: pointer; line-height: 1.25; transition: background .15s, color .15s; }
 .segmented label:hover { color: var(--text); }
 .segmented input:checked + label { background: #fff; color: var(--text); box-shadow: 0 1px 2px rgba(0,0,0,.08), 0 0 0 1px var(--border); }
 .segmented input:focus-visible + label { outline: 2px solid var(--accent); outline-offset: 1px; }
 .segmented.mini label { min-height: 30px; padding: 4px 10px; font-size: 0.8rem; }
 /* Narrow columns: tighter segmented labels so three options fit on one line */
 @container (max-width: 420px) {
-  .segmented.block label { padding-left: 6px; padding-right: 6px; font-size: 0.8rem; min-width: 5.5rem; }
+  .segmented.block label { padding-left: 4px; padding-right: 4px; font-size: 0.8rem; min-width: 5rem; }
 }
 /* Narrow results: the headline tile takes the full width; an odd last stat does too (no orphans) */
 @container (max-width: 560px) {
@@ -153,7 +153,7 @@ select.plain:focus { outline: 0; border-color: var(--accent); box-shadow: 0 0 0 
 /* Checkbox chips */
 .chips { display: flex; flex-wrap: wrap; gap: 8px; }
 .chips input { position: absolute; opacity: 0; pointer-events: none; }
-.chips label { display: inline-flex; align-items: center; min-height: 38px; padding: 6px 12px; border: 1px solid var(--border-strong); border-radius: 999px; font-size: var(--text-sm); cursor: pointer; background: #fff; color: var(--text-2); transition: all .15s; }
+.chips label { margin: 0; display: inline-flex; align-items: center; min-height: 40px; padding: 6px 12px; border: 1px solid var(--border-strong); border-radius: 999px; font-size: var(--text-sm); cursor: pointer; background: #fff; color: var(--text-2); transition: all .15s; }
 .chips input:checked + label { background: var(--accent-soft); border-color: var(--accent); color: var(--accent-text); font-weight: 600; }
 .chips input:focus-visible + label { outline: 2px solid var(--accent); outline-offset: 1px; }
 
@@ -169,19 +169,24 @@ details.section > .body { padding: 4px var(--space-3) var(--space-3); }
 
 /* ---------- Results ---------- */
 .hero { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 9rem), 1fr)); gap: var(--space-2); }
-.hero .tile { background: var(--surface-2); border-radius: var(--radius-sm); padding: var(--space-2) var(--space-3); min-width: 0; }
+.hero .tile { background: var(--surface-2); border-radius: var(--radius-sm); padding: var(--space-2) var(--space-3); min-width: 0; display: grid; grid-template-rows: auto auto 1fr; }
 .hero .tile.primary { background: var(--accent-soft); }
 .hero .tile .k { font-size: 0.75rem; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: .04em; }
 .hero .tile .v { font-size: clamp(1.25rem, 1rem + 1.2vw, 1.6rem); font-weight: 700; letter-spacing: -0.02em; margin-top: 2px; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
 .hero .tile.primary .v { color: var(--accent-text); }
 .hero .tile.loss { background: var(--warn-soft); }
 .hero .tile.loss .v { color: var(--warn); }
-.hero .tile .s { font-size: 0.78rem; color: var(--muted); margin-top: 2px; }
+.hero .tile .s { font-size: 0.78rem; color: var(--muted); margin-top: 2px; align-self: start; }
 .stat-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 9rem), 1fr)); gap: var(--space-2); }
-.stat { background: var(--surface-2); border-radius: var(--radius-sm); padding: var(--space-2); min-width: 0; }
+.stat { background: var(--surface-2); border-radius: var(--radius-sm); padding: var(--space-2); min-width: 0; display: grid; grid-template-rows: auto auto 1fr; }
 .stat .k { font-size: 0.75rem; color: var(--muted); font-weight: 600; }
 .stat .v { font-size: var(--text-lg); font-weight: 700; font-variant-numeric: tabular-nums; margin-top: 2px; overflow-wrap: anywhere; }
-.stat .s { font-size: 0.75rem; color: var(--muted); }
+.stat .s { font-size: 0.75rem; color: var(--muted); align-self: start; }
+/* Line up label, value and subtext across tiles in the same row */
+@supports (grid-template-rows: subgrid) {
+  .hero .tile { grid-row: span 3; grid-template-rows: subgrid; row-gap: 0; }
+  .stat { grid-row: span 3; grid-template-rows: subgrid; row-gap: 0; }
+}
 .badge { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 999px; font-size: 0.75rem; font-weight: 600; background: var(--warn-soft); color: var(--warn); }
 .badge.good { background: var(--good-soft); color: var(--good); }
 
@@ -197,10 +202,11 @@ details.section > .body { padding: 4px var(--space-3) var(--space-3); }
 .lines tr.sub td { color: var(--text-2); padding-left: 14px; }
 .lines tr.sub td:first-child::before { content: "↳ "; color: var(--muted); }
 .lines tr.sub td + td { padding-left: 10px; }
+.lines tr.sub td:first-child .note { padding-left: 1.3em; }
 .lines td .note { display: block; color: var(--muted); font-size: 0.78rem; white-space: normal; font-weight: 400; }
 .lines td.neg { color: var(--text-2); }
 .lines tr:last-child td { border-bottom: 0; }
-.lines .band-rate { display: inline-block; min-width: 3.6em; color: var(--muted); font-size: 0.78rem; }
+.lines .band-rate { display: inline-block; width: 4.6em; color: var(--muted); font-size: 0.78rem; }
 .lines tr.hl td { background: var(--accent-soft); }
 
 /* Split bar */

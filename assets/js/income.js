@@ -62,11 +62,16 @@ function syncItemisedExpenses() {
   }
 }
 
+const incomeChips = () => new Set($$('input[name="inc"]:checked', form).map((c) => c.value));
+
 function syncVisibility() {
   syncItemisedExpenses();
-  const mode = form.mode.value;
-  $('#sec-employment').hidden = mode === 'self';
-  $('#sec-self').hidden = mode === 'employed';
+  const inc = incomeChips();
+  $('#sec-employment').hidden = !inc.has('emp');
+  $('#sec-self').hidden = !inc.has('se');
+  $('#sec-property').hidden = !inc.has('prop');
+  $('#sec-savings').hidden = !inc.has('sav');
+  $('#sec-other').hidden = !inc.has('oth');
   const pm = $('#pensionMethod').value;
   $('#pension-row').hidden = pm === 'none';
   const pt = form.pt.value;
@@ -79,9 +84,9 @@ function syncVisibility() {
 // ------------------------------------------------------------------ form <-> state
 function readForm() {
   const f = form;
-  const mode = f.mode.value;
+  const inc = incomeChips();
   const raw = {
-    y: f.y.value, r: f.r.value, mode,
+    y: f.y.value, r: f.r.value, inc: [...inc].join(','),
     sal: f.sal.value, bon: f.bon.value, pm: f.pm.value, pv: f.pv.value, pt: f.pt.value, ben: f.ben.value, eex: f.eex.value, pg: f.pg.value,
     to: f.to.value, ex: f.ex.value, ded: f.ded.value, sep: f.sep.value,
     rent: f.rent.value, psh: f.psh.value, pex: f.pex.value, pe1: f.pe1.value, pe2: f.pe2.value, pe3: f.pe3.value, pe4: f.pe4.value, pe5: f.pe5.value, rep: f.rep.value, fc: f.fc.value, fcbf: f.fcbf.value, pded: f.pded.value, plbf: f.plbf.value, lod: f.lod.value, lods: f.lods.checked ? '1' : '',
@@ -92,17 +97,17 @@ function readForm() {
   };
   const input = {
     region: raw.r,
-    employment: mode === 'self' ? {} : {
+    employment: !inc.has('emp') ? {} : {
       salary: parseNum(raw.sal), bonus: parseNum(raw.bon), taxableBenefits: parseNum(raw.ben), expenses: parseNum(raw.eex), payrollGiving: parseNum(raw.pg),
       pension: { method: raw.pm, type: raw.pt, value: parseNum(raw.pv) },
     },
-    selfEmployment: mode === 'employed' ? {} : { turnover: parseNum(raw.to), expenses: parseNum(raw.ex), deduction: raw.ded, pensionPaid: parseNum(raw.sep) },
-    property: {
+    selfEmployment: !inc.has('se') ? {} : { turnover: parseNum(raw.to), expenses: parseNum(raw.ex), deduction: raw.ded, pensionPaid: parseNum(raw.sep) },
+    property: !inc.has('prop') ? {} : {
       rentalIncome: parseNum(raw.rent), share: raw.psh.trim() === '' ? 100 : parseNum(raw.psh), expenses: parseNum(raw.pex), replacementItems: parseNum(raw.rep),
       financeCosts: parseNum(raw.fc), financeCostsBroughtForward: parseNum(raw.fcbf), lossesBroughtForward: parseNum(raw.plbf),
       lodgerIncome: parseNum(raw.lod), lodgerShared: !!raw.lods, deduction: raw.pded,
     },
-    other: { savingsInterest: parseNum(raw.sav), dividends: parseNum(raw.div), otherIncome: parseNum(raw.oth) },
+    other: { savingsInterest: inc.has('sav') ? parseNum(raw.sav) : 0, dividends: inc.has('sav') ? parseNum(raw.div) : 0, otherIncome: inc.has('oth') ? parseNum(raw.oth) : 0 },
     studentLoans: raw.sl ? raw.sl.split(',') : [],
     adjustments: { giftAid: parseNum(raw.ga), marriageAllowance: raw.ma, blindPersonsAllowance: !!raw.bpa, childBenefitChildren: parseNum(raw.ch), childBenefitOptedOut: !!raw.cbo },
   };
@@ -115,13 +120,18 @@ function restoreFromUrl() {
   const setRadio = (name, v) => { const r = $(`input[name="${name}"][value="${v}"]`, f); if (r) r.checked = true; };
   if (q.y && state.index.years.some((y) => y.id === q.y)) f.y.value = q.y;
   if (q.r) setRadio('r', q.r);
-  if (q.mode) setRadio('mode', q.mode);
+  const chips = new Set(q.inc ? q.inc.split(',') : ['emp']);
+  if (q.mode === 'self') { chips.delete('emp'); chips.add('se'); }
+  if (q.mode === 'both') chips.add('se');
+  if (q.rent || q.lod) chips.add('prop');
+  if (q.sav || q.div) chips.add('sav');
+  if (q.oth) chips.add('oth');
+  for (const c of $$('input[name="inc"]', f)) c.checked = chips.has(c.value);
   for (const k of ['sal', 'bon', 'pv', 'ben', 'eex', 'pg', 'to', 'ex', 'sep', 'rent', 'psh', 'pex', 'pe1', 'pe2', 'pe3', 'pe4', 'pe5', 'rep', 'fc', 'fcbf', 'plbf', 'lod', 'sav', 'div', 'oth', 'ga', 'ch']) if (q[k] != null && f[k]) f[k].value = q[k];
   if (q.pded) setRadio('pded', q.pded);
   if (q.cbo) f.cbo.checked = true;
   if (q.ov) { try { const o = JSON.parse(q.ov); if (o && typeof o === 'object') state.overrides = o; } catch { /* ignore bad overrides */ } }
   if (q.lods) f.lods.checked = true;
-  if (q.rent || q.pex || q.fc || q.fcbf || q.lod || q.plbf) $('#sec-property').open = true;
   if (q.pe1 || q.pe2 || q.pe3 || q.pe4 || q.pe5) $('#pex-itemise').open = true;
   if (q.plbf || q.lod) $('#prop-more').open = true;
   if (Object.keys(state.overrides).length) $('#sec-rates').open = true;
@@ -132,7 +142,6 @@ function restoreFromUrl() {
   if (q.bpa) f.bpa.checked = true;
   if (q.sl) for (const p of q.sl.split(',')) { const c = $(`input[name="sl"][value="${p}"]`, f); if (c) c.checked = true; }
   if (q.p && ['month', 'week'].includes(q.p)) state.period = q.p;
-  if (q.sav || q.div || q.oth) $('#sec-other').open = true;
   if (q.ga || q.ma || q.bpa || q.ch || q.cbo) $('#sec-adjust').open = true;
 }
 
@@ -148,6 +157,7 @@ function render() {
   const m = marginalRate(input, rates);
   results.innerHTML = '';
   results.append(heroCard(r, rates), summaryCard(r, m, rates));
+  if (r.collection && (r.collection.selfAssessment.likelyNeedsReturn || Math.abs(r.collection.selfAssessment.balancingPayment) > 0.5)) results.append(collectionCard(r, rates));
   results.append(incomeCard(r, rates), allowancesCard(r, rates), incomeTaxCard(r, rates), niCard(r, rates));
   if (r.studentLoans.plans.length) results.append(studentLoanCard(r, rates));
   if (r.giving) results.append(givingCard(r, rates));
@@ -255,12 +265,40 @@ function stat(k, v, s) {
   return el('div', { class: 'stat' }, [el('div', { class: 'k', text: k }), el('div', { class: 'v', text: v }), s ? el('div', { class: 's', text: s }) : null]);
 }
 
+function collectionCard(r, rates) {
+  const c = r.collection, p = c.paye, sa = c.selfAssessment;
+  const card = el('div', { class: 'card' });
+  card.append(el('div', { class: 'card-header' }, [el('div', {}, [el('h2', { text: 'How your tax is collected' }), el('p', { text: 'What comes out through payroll and what you settle on a tax return.' })])]));
+  const rows = [
+    ['Income tax', money(sa.incomeTax), { mid: money(p.incomeTax), note: sa.incomeTax < -0.5 ? 'Negative: PAYE has taken more than you owe, so Self Assessment gives a refund.' : null }],
+    ['National Insurance', money(sa.class4), { mid: money(p.nationalInsurance), note: 'Class 1 via payroll; Class 4 on self-employed profits via Self Assessment.' }],
+    r.studentLoans.total > 0 ? ['Student loan', money(sa.studentLoan), { mid: money(p.studentLoan) }] : null,
+    sa.hicbc > 0 ? ['High Income Child Benefit Charge', money(sa.hicbc), { mid: money(0) }] : null,
+    ['Total', money(sa.balancingPayment), { mid: money(p.total), total: true }],
+  ];
+  card.append(el('div', { class: 'table-scroll' }, linesTable(rows, { header: ['', 'PAYE', 'Self Assessment'] })));
+  const endYear = Number(String(rates.ends).slice(0, 4));
+  const jan = `31 January ${endYear + 1}`, jul = `31 July ${endYear + 1}`;
+  const bits = [];
+  if (sa.balancingPayment > 0.5) bits.push(`<b>${money(sa.balancingPayment)}</b> to pay by ${jan} for the ${rates.label} year${state.period !== 'year' ? ' (shown ' + per() + ')' : ''}.`);
+  else if (sa.balancingPayment < -0.5) bits.push(`A refund of <b>${money(-sa.balancingPayment)}</b> once your return is processed.`);
+  if (sa.paymentsOnAccountRequired) bits.push(`Because the bill is £1,000 or more and most of it is not collected at source, HMRC also asks for <b>payments on account</b> towards the following year: <b>${money(sa.paymentOnAccount)}</b> on ${jan} and again on ${jul}, assuming your income stays the same. The first year you fall into this, ${jan} therefore costs ${money(sa.balancingPayment + sa.paymentOnAccount)}.`);
+  if (bits.length) card.append(el('div', { class: 'note-box', style: 'margin-top:14px', html: bits.join(' ') }));
+  if (sa.likelyNeedsReturn && sa.reasons.length) card.append(el('p', { class: 'muted small', style: 'margin-top:10px', html: `You will probably need to send a tax return because of ${sa.reasons.join(', ')}. <a href="https://www.gov.uk/check-if-you-need-tax-return" target="_blank" rel="noopener">Check on GOV.UK</a>.` }));
+  card.append(explain('How this split is worked out', [
+    el('p', { text: 'PAYE is estimated as the tax and National Insurance your employer would deduct on your salary alone, with a standard tax code. Everything the code does not know about (self-employed profits, rent, interest, dividends, the Child Benefit charge, higher-rate relief you have to claim) goes through Self Assessment as a balancing payment. HMRC can instead collect small amounts by adjusting your tax code, which changes the timing but not the total.' }),
+  ]));
+  return card;
+}
+
 function incomeCard(r, rates) {
   const e = r.income.employment, s = r.income.selfEmployment, i = r.income;
   const card = el('div', { class: 'card' });
   card.append(el('div', { class: 'card-header' }, [el('div', {}, [el('h2', { text: 'Step 1 · Your income' }), el('p', { text: 'What counts as income for tax.' })])]));
   const rows = [];
+  const group = (t) => rows.push([el('b', { text: t }), '']);
   if (e.grossPay > 0 || e.taxableBenefits > 0) {
+    group('Employment (PAYE)');
     rows.push(['Salary', money(e.salary)]);
     if (e.bonus > 0) rows.push(['Bonus', money(e.bonus)]);
     if (e.pensionGross > 0 && (e.pensionMethod === 'salary_sacrifice' || e.pensionMethod === 'net_pay')) {
@@ -275,7 +313,8 @@ function incomeCard(r, rates) {
     rows.push(['Taxable employment income', money(e.taxableIncome), { total: true }]);
   }
   if (s.turnover > 0) {
-    rows.push(['Self-employed turnover', money(s.turnover)]);
+    group('Self-employment (Self Assessment)');
+    rows.push(['Turnover', money(s.turnover)]);
     if (s.deduction === 'trading_allowance') rows.push(['Trading allowance', '− ' + money(s.tradingAllowanceUsed), { neg: true, sub: true, note: s.auto ? `Chosen automatically: it beats deducting your ${money(s.expenses)} of expenses.` : null }]);
     else rows.push(['Allowable expenses', '− ' + money(s.expensesUsed), { neg: true, sub: true, note: s.auto ? 'Chosen automatically: it beats the £1,000 trading allowance.' : null }]);
     rows.push(['Taxable profit', money(s.profit), { total: true }]);
@@ -283,6 +322,7 @@ function incomeCard(r, rates) {
   }
   const pr = i.property;
   if (pr.rentalIncomeTotal > 0 || pr.lodgerIncome > 0) {
+    group('Property (Self Assessment)');
     if (pr.rentalIncomeTotal > 0) {
       rows.push([pr.share < 1 ? `Rental income (your ${fmt.pct(pr.share, 0)} share of ${money(pr.rentalIncomeTotal)})` : 'Rental income', money(pr.rentalIncome)]);
       if (pr.deduction === 'property_allowance') rows.push(['Property allowance', '− ' + money(pr.propertyAllowanceUsed), { neg: true, sub: true, note: pr.auto ? 'Chosen automatically: it beats deducting expenses and claiming the mortgage interest credit.' : null }]);
@@ -300,9 +340,10 @@ function incomeCard(r, rates) {
     else if (pr.lossesCarriedForward > 0 && pr.currentLoss === 0) rows.push(['Property losses carried forward', money(pr.lossesCarriedForward), { sub: true, note: 'Nothing to set them against this year.' }]);
     rows.push(['Taxable property profit', money(pr.profit), { total: true, note: pr.financeCosts > 0 ? `Mortgage interest of ${money(pr.financeCosts)} is not deducted here; a 20% tax credit is given in Step 3 instead.` : null }]);
   }
+  if (i.savings > 0 || i.dividends > 0) group('Savings and dividends (Self Assessment)');
   if (i.savings > 0) rows.push(['Savings interest', money(i.savings)]);
   if (i.dividends > 0) rows.push(['Dividends', money(i.dividends)]);
-  if (i.otherIncome > 0) rows.push(['Other income', money(i.otherIncome)]);
+  if (i.otherIncome > 0) { group('Pension or other income (Self Assessment)'); rows.push(['Other taxable income', money(i.otherIncome)]); }
   rows.push(['Total income for tax', money(i.total), { total: true }]);
   card.append(linesTable(rows));
   if (pr.rentalIncomeTotal > 0 || pr.lodgerIncome > 0) card.append(explain('How landlords are taxed', [

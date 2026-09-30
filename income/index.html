@@ -35,33 +35,35 @@
             <div><h2>About you</h2><p>Pick the tax year and where you live.</p></div>
           </div>
           <div class="stack">
-            <div class="row">
-              <div class="field">
-                <label for="taxYear">Tax year</label>
-                <select id="taxYear" name="y" class="plain"></select>
-              </div>
-              <div class="field">
-                <span class="label">Where you live</span>
-                <div class="segmented block" role="radiogroup" aria-label="Region">
-                  <input type="radio" name="r" id="r-ruk" value="ruk" checked><label for="r-ruk">England, Wales or NI</label>
-                  <input type="radio" name="r" id="r-scot" value="scotland"><label for="r-scot">Scotland</label>
-                </div>
-              </div>
+            <div class="field">
+              <label for="taxYear">Tax year</label>
+              <select id="taxYear" name="y" class="plain"></select>
             </div>
             <div class="field">
-              <span class="label">How do you earn?</span>
-              <div class="segmented block" role="radiogroup" aria-label="Type of income">
-                <input type="radio" name="mode" id="m-emp" value="employed" checked><label for="m-emp">Employed</label>
-                <input type="radio" name="mode" id="m-self" value="self"><label for="m-self">Self&#8209;employed</label>
-                <input type="radio" name="mode" id="m-both" value="both"><label for="m-both">Both</label>
+              <span class="label">Where you live</span>
+              <div class="segmented block" role="radiogroup" aria-label="Region">
+                <input type="radio" name="r" id="r-ruk" value="ruk" checked><label for="r-ruk">England, Wales or NI</label>
+                <input type="radio" name="r" id="r-scot" value="scotland"><label for="r-scot">Scotland</label>
               </div>
+              <span class="hint">Scotland has its own income tax bands for earnings.</span>
+            </div>
+            <div class="field">
+              <span class="label">What income do you have?</span>
+              <div class="chips" id="income-chips">
+                <input type="checkbox" name="inc" id="inc-emp" value="emp" checked><label for="inc-emp">Employment (PAYE)</label>
+                <input type="checkbox" name="inc" id="inc-se" value="se"><label for="inc-se">Self-employment</label>
+                <input type="checkbox" name="inc" id="inc-prop" value="prop"><label for="inc-prop">Property</label>
+                <input type="checkbox" name="inc" id="inc-sav" value="sav"><label for="inc-sav">Savings &amp; dividends</label>
+                <input type="checkbox" name="inc" id="inc-oth" value="oth"><label for="inc-oth">Pension or other</label>
+              </div>
+              <span class="hint">Tick everything that applies. Salary is taxed through PAYE; the rest is reported on a Self Assessment tax return.</span>
             </div>
           </div>
         </div>
 
         <div class="card" id="sec-employment">
           <div class="card-header">
-            <div><h2>Employment</h2><p>Your salary before any deductions.</p></div>
+            <div><h2>Employment</h2><p>Taxed through PAYE. Your salary before any deductions.</p></div>
           </div>
           <div class="stack">
             <div class="row">
@@ -84,7 +86,14 @@
               </select>
               <span class="hint">Not sure? Most workplace schemes are "net pay" or "relief at source". Your payslip or pension provider will say which. Salary sacrifice is usually described as "salary exchange".</span>
             </div>
-            <div class="row" id="pension-row" hidden>
+            <div class="stack" id="pension-row" hidden>
+              <div class="field">
+                <span class="label">Your contribution is</span>
+                <div class="segmented block" role="radiogroup" aria-label="Contribution type">
+                  <input type="radio" name="pt" id="pt-percent" value="percent" checked><label for="pt-percent">A % of salary</label>
+                  <input type="radio" name="pt" id="pt-amount" value="amount"><label for="pt-amount">A £ amount per year</label>
+                </div>
+              </div>
               <div class="field">
                 <label for="pensionValue">Your contribution</label>
                 <div class="input-wrap">
@@ -92,13 +101,6 @@
                   <input id="pensionValue" name="pv" inputmode="decimal" placeholder="5">
                 </div>
                 <span class="hint" id="pensionHint">Percentage of salary, before tax relief.</span>
-              </div>
-              <div class="field">
-                <span class="label">Entered as</span>
-                <div class="segmented block" role="radiogroup" aria-label="Contribution type">
-                  <input type="radio" name="pt" id="pt-percent" value="percent" checked><label for="pt-percent">% of salary</label>
-                  <input type="radio" name="pt" id="pt-amount" value="amount"><label for="pt-amount">£ per year</label>
-                </div>
               </div>
             </div>
             <details class="explain options">
@@ -126,7 +128,7 @@
 
         <div class="card" id="sec-self" hidden>
           <div class="card-header">
-            <div><h2>Self-employment</h2><p>Sole trader income reported on Self Assessment.</p></div>
+            <div><h2>Self-employment</h2><p>Self Assessment (SA103). Sole trader or freelance income.</p></div>
           </div>
           <div class="stack">
             <div class="row">
@@ -158,9 +160,11 @@
           </div>
         </div>
 
-        <details class="section" id="sec-property">
-          <summary><span>Property income<span class="sub">Rent from let property or a lodger, as on your Self Assessment</span></span></summary>
-          <div class="body stack">
+        <div class="card" id="sec-property" hidden>
+          <div class="card-header">
+            <div><h2>Property</h2><p>Self Assessment (SA105). Rent from let property or a lodger.</p></div>
+          </div>
+          <div class="stack">
             <div class="row">
               <div class="field">
                 <label for="rent">Rental income</label>
@@ -180,11 +184,11 @@
               <details class="explain options" id="pex-itemise">
                 <summary>Itemise expenses</summary>
                 <div class="body stack">
-                  <div class="row">
+                  <div class="stack">
                     <div class="field"><label for="pe1">Letting agent and management fees</label><div class="input-wrap"><span class="affix">£</span><input id="pe1" name="pe1" data-money data-itemise placeholder="0"></div></div>
                     <div class="field"><label for="pe2">Repairs and maintenance</label><div class="input-wrap"><span class="affix">£</span><input id="pe2" name="pe2" data-money data-itemise placeholder="0"></div><span class="hint">Like-for-like repairs only. Improvements are capital and not allowed.</span></div>
                   </div>
-                  <div class="row">
+                  <div class="stack">
                     <div class="field"><label for="pe3">Insurance, ground rent and service charges</label><div class="input-wrap"><span class="affix">£</span><input id="pe3" name="pe3" data-money data-itemise placeholder="0"></div><span class="hint">Landlord insurance, ground rent, service charges, and any council tax or utilities you pay.</span></div>
                     <div class="field"><label for="pe4">Legal, accountancy and professional fees</label><div class="input-wrap"><span class="affix">£</span><input id="pe4" name="pe4" data-money data-itemise placeholder="0"></div><span class="hint">Accountant, legal fees for lets of a year or less, referencing and inventory fees.</span></div>
                   </div>
@@ -238,30 +242,40 @@
               </div>
             </details>
           </div>
-        </details>
+        </div>
 
-        <details class="section" id="sec-other">
-          <summary><span>Other income<span class="sub">Savings interest, dividends and other taxable income</span></span></summary>
-          <div class="body stack">
+        <div class="card" id="sec-savings" hidden>
+          <div class="card-header">
+            <div><h2>Savings and dividends</h2><p>Self Assessment. Interest and dividends outside ISAs.</p></div>
+          </div>
+          <div class="stack">
             <div class="row">
               <div class="field">
                 <label for="savings">Savings interest</label>
                 <div class="input-wrap"><span class="affix">£</span><input id="savings" name="sav" data-money placeholder="0"></div>
-                <span class="hint">Interest outside ISAs.</span>
+                <span class="hint">Bank and building society interest for the year.</span>
               </div>
               <div class="field">
                 <label for="dividends">Dividends</label>
                 <div class="input-wrap"><span class="affix">£</span><input id="dividends" name="div" data-money placeholder="0"></div>
-                <span class="hint">From shares or your own company.</span>
+                <span class="hint">From shares, funds or your own company.</span>
               </div>
             </div>
+          </div>
+        </div>
+
+        <div class="card" id="sec-other" hidden>
+          <div class="card-header">
+            <div><h2>Pension or other income</h2><p>Self Assessment. Taxed like earnings, with no National Insurance.</p></div>
+          </div>
+          <div class="stack">
             <div class="field">
               <label for="otherIncome">Other taxable income</label>
               <div class="input-wrap"><span class="affix">£</span><input id="otherIncome" name="oth" data-money placeholder="0"></div>
-              <span class="hint">For example a taxable pension or trust income. Taxed like earnings but with no National Insurance.</span>
+              <span class="hint">For example a private or State Pension, trust income, or taxable benefits. Not employment, self-employment, property, interest or dividends.</span>
             </div>
           </div>
-        </details>
+        </div>
 
         <div class="card" id="sec-loans">
           <div class="card-header">

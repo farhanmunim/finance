@@ -448,3 +448,37 @@ test('rent a room blocks the property allowance', () => {
   const auto = calculate({ property: { rentalIncome: 5000, expenses: 100, lodgerIncome: 8000 } }, y2627);
   assert.equal(auto.income.property.deduction, 'expenses');
 });
+
+// ---------------------------------------------------------------- PAYE vs Self Assessment
+test('collection: employee with rental profit pays the extra tax through Self Assessment', () => {
+  const r = calculate({ employment: { salary: 40000 }, property: { rentalIncome: 12000, expenses: 2000, deduction: 'expenses' } }, y2627);
+  const payeOnly = calculate({ employment: { salary: 40000 } }, y2627);
+  close(r.collection.paye.incomeTax, payeOnly.incomeTax.total);
+  close(r.collection.selfAssessment.incomeTax, r.incomeTax.total - payeOnly.incomeTax.total);
+  close(r.collection.selfAssessment.balancingPayment, r.incomeTax.total - payeOnly.incomeTax.total);
+  assert.equal(r.collection.selfAssessment.likelyNeedsReturn, true);
+  // £10,000 profit all within the basic band: £2,000 -> payments on account required
+  close(r.collection.selfAssessment.relevantAmount, 2000);
+  assert.equal(r.collection.selfAssessment.paymentsOnAccountRequired, true);
+  close(r.collection.selfAssessment.paymentOnAccount, 1000);
+});
+
+test('collection: no payments on account when the SA bill is under £1,000', () => {
+  const r = calculate({ employment: { salary: 40000 }, other: { dividends: 3000 } }, y2627);
+  close(r.collection.selfAssessment.balancingPayment, 2500 * 0.1075);
+  assert.equal(r.collection.selfAssessment.paymentsOnAccountRequired, false);
+});
+
+test('collection: self-employed only pays everything through Self Assessment', () => {
+  const r = calculate({ selfEmployment: { turnover: 50000, expenses: 5000, deduction: 'expenses' }, studentLoans: ['plan2'] }, y2627);
+  assert.equal(r.collection.paye.total, 0);
+  close(r.collection.selfAssessment.balancingPayment, r.incomeTax.total + r.nationalInsurance.class4.total + r.studentLoans.total);
+  assert.equal(r.collection.selfAssessment.paymentsOnAccountRequired, true);
+});
+
+test('collection: employee only has nothing due through Self Assessment', () => {
+  const r = calculate({ employment: { salary: 40000 }, studentLoans: ['plan2'] }, y2627);
+  close(r.collection.selfAssessment.balancingPayment, 0);
+  assert.equal(r.collection.selfAssessment.likelyNeedsReturn, false);
+  close(r.collection.paye.studentLoan, r.studentLoans.total);
+});

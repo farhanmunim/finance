@@ -43,6 +43,8 @@ Figures currently covered by the automatic check: Personal Allowance and its inc
 
 ## Calculation method (income tool)
 
+The form is organised by how the tax is collected: **Employment (PAYE)** and the **Self Assessment** sources (self-employment SA103, property SA105, savings and dividends, pension or other income). You tick which income you have. The results show the full liability, then split it into what payroll deducts (tax on salary alone with a standard code, Class 1 NI, student loan on pay) and the Self Assessment balancing payment (remaining income tax, Class 4 NI, Child Benefit charge, student loan on other income), with payments on account when the bill is £1,000 or more and under 80% was collected at source.
+
 Implemented in `assets/js/tax-engine.js` (pure functions, unit-tested in `tests/`).
 
 1. **Income.** Employment pay after salary sacrifice or net-pay pension contributions, plus taxable benefits, less allowable expenses; self-employed profit (turnover less expenses or the trading allowance, chosen automatically unless overridden); property profit; savings interest; dividends; other income.

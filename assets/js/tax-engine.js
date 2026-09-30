@@ -121,7 +121,7 @@ export function calculate(input = {}, rates) {
   return calculateOnce(input, rates);
 }
 
-function calculateOnce(input = {}, rates) {
+function calculateOnce(input = {}, rates, nested = false) {
   const it = rates.incomeTax;
   const ni = rates.nationalInsurance;
   const sl = rates.studentLoans;
@@ -417,14 +417,47 @@ function calculateOnce(input = {}, rates) {
   const totalDeductions = incomeTaxTotal + niTotal + studentLoanTotal + hicbcCharge;
   const takeHome = cashIncome - financeCosts - pensionCash - sePensionPaid - payrollGiving - totalDeductions + childBenefitReceived;
 
+  // ---------------------------------------------------------------- 9b. How the tax is collected: PAYE vs Self Assessment
+  // Payroll deducts tax on employment income alone (standard code), Class 1 NI and student loan
+  // on pay. Everything else is settled through a Self Assessment return: the balance of income
+  // tax, Class 4 NI, the Child Benefit charge and student loan on other income. Payments on
+  // account for the following year are due when the SA bill is £1,000 or more and less than 80%
+  // of the total was collected at source.
+  const sa = rates.selfAssessment || { paymentsOnAccountMinimum: 1000, collectedAtSourceShare: 0.8 };
+  const hasSelfAssessmentIncome = profit > 0 || rent > 0 || lodgerIncome > 0 || savings > 0 || dividends > 0 || otherIncome > 0 || hicbcCharge > 0 || turnover > 0;
+  let collection = null;
+  if (!nested && (grossPay > 0 || hasSelfAssessmentIncome)) {
+    const payeRun = grossPay > 0 ? calculateOnce({ region, employment: input.employment, studentLoans: input.studentLoans, adjustments: { marriageAllowance: adj.marriageAllowance, blindPersonsAllowance: adj.blindPersonsAllowance } }, rates, true) : null;
+    const payeTax = payeRun ? payeRun.incomeTax.total : 0;
+    const payeSL = payeRun ? payeRun.studentLoans.total : 0;
+    const saIncomeTax = round2(incomeTaxTotal - payeTax);
+    const saStudentLoan = studentLoanTotal - payeSL;
+    const totalLiability = incomeTaxTotal + class4 + hicbcCharge;
+    const relevantAmount = round2(saIncomeTax + class4 + hicbcCharge);
+    const balancingPayment = round2(relevantAmount + saStudentLoan);
+    const poaRequired = relevantAmount >= sa.paymentsOnAccountMinimum && payeTax < sa.collectedAtSourceShare * totalLiability;
+    const reasons = [];
+    if (turnover > it.tradingAllowance) reasons.push('self-employed income over £1,000');
+    if (rentTotal * share + lodgerIncome > it.propertyAllowance && (rent > 0 || lodgerTaxable > 0)) reasons.push('property income');
+    if (dividends > 10000) reasons.push('dividends over £10,000');
+    if (savings > 10000) reasons.push('savings interest over £10,000');
+    if (hicbcCharge > 0) reasons.push('the High Income Child Benefit Charge');
+    if (rasGross > 0 && level !== 'basic') reasons.push('higher-rate pension relief to claim');
+    if (giftAidPaid > 0 && level !== 'basic') reasons.push('higher-rate Gift Aid relief to claim');
+    collection = {
+      paye: { incomeTax: round2(payeTax), nationalInsurance: round2(class1Employee), studentLoan: payeSL, total: round2(payeTax + class1Employee + payeSL) },
+      selfAssessment: { incomeTax: saIncomeTax, class4: round2(class4), hicbc: hicbcCharge, studentLoan: saStudentLoan, balancingPayment, relevantAmount, paymentsOnAccountRequired: poaRequired, paymentOnAccount: poaRequired ? round2(relevantAmount / 2) : 0, likelyNeedsReturn: hasSelfAssessmentIncome && (reasons.length > 0 || balancingPayment > 0.5), reasons },
+    };
+  }
+
   // ---------------------------------------------------------------- 10. Charitable giving
   // Gift Aid: the charity reclaims basic-rate tax (25p per £1 given). Your basic and higher rate
   // limits are extended by the gross donation, and adjusted net income falls by it, so higher-rate
   // taxpayers save more tax and the Personal Allowance taper and Child Benefit charge ease.
   // You must have paid at least as much tax as the charities reclaim.
   let giving = null;
-  if (giftAidPaid > 0 || payrollGiving > 0) {
-    const without = calculateOnce({ ...input, employment: { ...(input.employment || {}), payrollGiving: 0 }, adjustments: { ...(input.adjustments || {}), giftAid: 0 } }, rates);
+  if (!nested && (giftAidPaid > 0 || payrollGiving > 0)) {
+    const without = calculateOnce({ ...input, employment: { ...(input.employment || {}), payrollGiving: 0 }, adjustments: { ...(input.adjustments || {}), giftAid: 0 } }, rates, true);
     const taxSaved = round2(without.totals.totalDeductions - totalDeductions);
     const charityClaims = round2(giftAidGross - giftAidPaid);
     const shortfall = Math.max(0, charityClaims - incomeTaxTotal);
@@ -492,6 +525,7 @@ function calculateOnce(input = {}, rates) {
     studentLoans: { plans, income: r(slIncome), unearnedIncluded: r(slUnearned), undergraduate: undergrad, postgraduate, total: studentLoanTotal },
     hicbc,
     giving,
+    collection,
     totals: {
       grossIncome: r(grossIncome), cashIncome: r(cashIncome), pensionCash: r(pensionCash + sePensionPaid),
       incomeTax: r(incomeTaxTotal), nationalInsurance: r(niTotal), studentLoans: studentLoanTotal, hicbc: hicbcCharge, childBenefitReceived: r(childBenefitReceived), financeCosts: r(financeCosts), payrollGiving: r(payrollGiving),

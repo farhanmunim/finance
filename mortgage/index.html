@@ -124,7 +124,7 @@
               <span class="label">When I overpay, I want to</span>
               <div class="segmented block" role="radiogroup" aria-label="Effect of overpaying">
                 <input type="radio" name="eff" id="eff-term" value="reduce_term" checked><label for="eff-term">Pay it off sooner</label>
-                <input type="radio" name="eff" id="eff-pay" value="reduce_payment"><label for="eff-pay">Lower my monthly payment</label>
+                <input type="radio" name="eff" id="eff-pay" value="reduce_payment"><label for="eff-pay">Lower my payment</label>
               </div>
               <span class="hint">Paying it off sooner saves the most interest. Ask your lender which they do by default.</span>
             </div>
@@ -168,18 +168,16 @@
                 <span class="hint">Letting agent, insurance, repairs, service charge.</span>
               </div>
             </div>
-            <div class="row">
-              <div class="field">
-                <label for="otherIncome">Your other taxable income</label>
-                <div class="input-wrap"><span class="affix">£</span><input id="otherIncome" name="oi" data-money placeholder="e.g. 45,000"></div>
-                <span class="hint">Salary, pension or profits before tax. The rent is taxed on top of this, using your Personal Allowance and tax bands automatically.</span>
-              </div>
-              <div class="field">
-                <span class="label">Where you live</span>
-                <div class="segmented block" role="radiogroup" aria-label="Region">
-                  <input type="radio" name="reg" id="reg-ruk" value="ruk" checked><label for="reg-ruk">England, Wales or NI</label>
-                  <input type="radio" name="reg" id="reg-scot" value="scotland"><label for="reg-scot">Scotland</label>
-                </div>
+            <div class="field">
+              <label for="otherIncome">Your other taxable income</label>
+              <div class="input-wrap"><span class="affix">£</span><input id="otherIncome" name="oi" data-money placeholder="e.g. 45,000"></div>
+              <span class="hint">Salary, pension or profits before tax. The rent is taxed on top of this, using your Personal Allowance and tax bands automatically.</span>
+            </div>
+            <div class="field">
+              <span class="label">Where you live</span>
+              <div class="segmented block" role="radiogroup" aria-label="Region">
+                <input type="radio" name="reg" id="reg-ruk" value="ruk" checked><label for="reg-ruk">England, Wales or NI</label>
+                <input type="radio" name="reg" id="reg-scot" value="scotland"><label for="reg-scot">Scotland</label>
               </div>
             </div>
           </div>
