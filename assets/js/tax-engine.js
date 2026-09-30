@@ -107,7 +107,7 @@ export function calculate(input = {}, rates) {
   if (seAuto || prAuto) {
     // "Automatic": try each allowance choice and keep the one with the lowest total deductions.
     const seOpts = seAuto ? ['expenses', 'trading_allowance'] : [input.selfEmployment?.deduction];
-    const prOpts = prAuto ? ['expenses', 'property_allowance'] : [input.property?.deduction];
+    const prOpts = prAuto ? (num(input.property?.lodgerIncome) > 0 ? ['expenses'] : ['expenses', 'property_allowance']) : [input.property?.deduction];
     let best = null;
     for (const se of seOpts) for (const pr of prOpts) {
       const r = calculateOnce({ ...input, selfEmployment: { ...(input.selfEmployment || {}), deduction: se }, property: { ...(input.property || {}), deduction: pr } }, rates);
@@ -186,15 +186,35 @@ function calculateOnce(input = {}, rates) {
   // Residential landlords cannot deduct mortgage interest (finance costs) from rental income.
   // Instead they get a tax reducer of 20% of the finance costs, capped (see below).
   const prop = input.property || {};
-  const rent = num(prop.rentalIncome);
-  const propExpenses = num(prop.expenses);
-  const financeCosts = num(prop.financeCosts);
-  const financeCostsBroughtForward = num(prop.financeCostsBroughtForward); // unused relief from earlier years
-  const usePropertyAllowance = prop.deduction === 'property_allowance';
+  // Jointly owned property: only your share of the income, costs and interest is yours to declare.
+  const share = prop.share == null || prop.share === '' ? 1 : clamp(num(prop.share) / 100, 0, 1);
+  const rentTotal = num(prop.rentalIncome);
+  const rent = rentTotal * share;
+  const propExpenses = num(prop.expenses) * share;
+  const replacementItems = num(prop.replacementItems) * share; // replacement of domestic items relief
+  const financeCosts = num(prop.financeCosts) * share;
+  const financeCostsBroughtForward = num(prop.financeCostsBroughtForward); // unused relief from earlier years (already your share)
+  const lossesBroughtForward = num(prop.lossesBroughtForward); // property losses from earlier years (already your share)
+  // Rent a Room: a lodger in your own home. Up to the threshold is tax-free; above it, the excess
+  // over the threshold is taxed with no expenses (the scheme's simple method).
+  const lodgerIncome = num(prop.lodgerIncome);
+  const rentARoomThreshold = prop.lodgerShared ? it.rentARoom.sharedThreshold : it.rentARoom.threshold;
+  const lodgerTaxable = lodgerIncome > rentARoomThreshold ? lodgerIncome - rentARoomThreshold : 0;
+  const rentARoomReliefUsed = Math.min(lodgerIncome, rentARoomThreshold);
+  let usePropertyAllowance = prop.deduction === 'property_allowance';
+  if (usePropertyAllowance && lodgerIncome > 0) {
+    warnings.push('The £1,000 property allowance cannot be claimed in a year when Rent a Room relief applies, so expenses have been deducted instead.');
+    usePropertyAllowance = false;
+  }
   const propertyAllowanceUsed = usePropertyAllowance ? Math.min(it.propertyAllowance, rent) : 0;
-  const propExpensesUsed = usePropertyAllowance ? 0 : Math.min(propExpenses, rent);
-  if (!usePropertyAllowance && propExpenses > rent && rent > 0) warnings.push('Property expenses exceed rental income. Property losses are not modelled; profit has been treated as £0.');
-  const propertyProfit = Math.max(0, rent - propertyAllowanceUsed - propExpensesUsed);
+  const propExpensesUsed = usePropertyAllowance ? 0 : propExpenses;
+  const replacementItemsUsed = usePropertyAllowance ? 0 : replacementItems;
+  const propertyResult = rent - propertyAllowanceUsed - propExpensesUsed - replacementItemsUsed; // may be a loss
+  const propertyCurrentLoss = Math.max(0, -propertyResult);
+  const propertyProfitBeforeLosses = Math.max(0, propertyResult) + lodgerTaxable;
+  const propertyLossUsed = Math.min(lossesBroughtForward, propertyProfitBeforeLosses);
+  const propertyProfit = propertyProfitBeforeLosses - propertyLossUsed;
+  const propertyLossesCarriedForward = lossesBroughtForward - propertyLossUsed + propertyCurrentLoss;
 
   // ---------------------------------------------------------------- 4. Other income
   const other = input.other || {};
@@ -391,8 +411,9 @@ function calculateOnce(input = {}, rates) {
 
   // ---------------------------------------------------------------- 9. Totals
   // Property: rent less expenses less finance costs is the cash that actually arrives.
-  const propertyCash = Math.max(0, rent - propExpensesUsed - (usePropertyAllowance ? propExpenses : 0)) - financeCosts;
-  const cashIncome = grossPay + profit + Math.max(0, rent - propExpensesUsed - (usePropertyAllowance ? propExpenses : 0)) + savings + dividends + otherIncome;
+  const propertyCashBeforeInterest = rent - propExpenses - replacementItems + lodgerIncome;
+  const propertyCash = propertyCashBeforeInterest - financeCosts;
+  const cashIncome = grossPay + profit + propertyCashBeforeInterest + savings + dividends + otherIncome;
   const totalDeductions = incomeTaxTotal + niTotal + studentLoanTotal + hicbcCharge;
   const takeHome = cashIncome - financeCosts - pensionCash - sePensionPaid - payrollGiving - totalDeductions + childBenefitReceived;
 
@@ -432,7 +453,13 @@ function calculateOnce(input = {}, rates) {
     income: {
       employment: { salary, bonus, grossPay, taxableBenefits: benefits, expenses: empExpenses, payrollGiving, pensionMethod: method, pensionGross: r(pensionGross), pensionCash: r(pensionCash), taxablePay: r(taxablePay), niablePay: r(niablePay), taxableIncome: r(employmentIncome) },
       selfEmployment: { turnover, expenses, deduction: useTradingAllowance ? 'trading_allowance' : 'expenses', tradingAllowanceUsed: r(tradingAllowanceUsed), expensesUsed: r(expensesUsed), profit: r(profit), pensionPaid: r(sePensionPaid), pensionGross: r(sePensionGross) },
-      property: { rentalIncome: rent, expenses: propExpenses, financeCosts, financeCostsBroughtForward, deduction: usePropertyAllowance ? 'property_allowance' : 'expenses', propertyAllowanceUsed: r(propertyAllowanceUsed), expensesUsed: r(propExpensesUsed), profit: r(propertyProfit), cash: r(propertyCash) },
+      property: {
+        rentalIncomeTotal: rentTotal, share, rentalIncome: r(rent), expenses: r(propExpenses), replacementItems: r(replacementItems), financeCosts: r(financeCosts), financeCostsBroughtForward,
+        deduction: usePropertyAllowance ? 'property_allowance' : 'expenses', propertyAllowanceUsed: r(propertyAllowanceUsed), expensesUsed: r(propExpensesUsed), replacementItemsUsed: r(replacementItemsUsed),
+        result: r(propertyResult), currentLoss: r(propertyCurrentLoss), lossesBroughtForward, lossUsed: r(propertyLossUsed), lossesCarriedForward: r(propertyLossesCarriedForward),
+        lodgerIncome, rentARoomThreshold, rentARoomReliefUsed: r(rentARoomReliefUsed), lodgerTaxable: r(lodgerTaxable),
+        profitBeforeLosses: r(propertyProfitBeforeLosses), profit: r(propertyProfit), cash: r(propertyCash),
+      },
       savings, dividends, otherIncome,
       nonSavings: r(nonSavings), total: r(totalIncome), gross: r(grossIncome), cash: r(cashIncome),
     },

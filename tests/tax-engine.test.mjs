@@ -395,3 +395,56 @@ test('marriage allowance transfer warns when the transferor is a higher-rate tax
   const r = calculate({ employment: { salary: 60000 }, adjustments: { marriageAllowance: 'transfer' } }, y2627);
   assert.ok(r.warnings.some((w) => /transferred/.test(w)));
 });
+
+// ---------------------------------------------------------------- property (SA105) coverage
+test('property: joint ownership share applies to rent, costs and interest', () => {
+  const r = calculate({ employment: { salary: 30000 }, property: { rentalIncome: 12000, expenses: 2000, financeCosts: 4000, share: 50, deduction: 'expenses' } }, y2627);
+  close(r.income.property.rentalIncome, 6000);
+  close(r.income.property.profit, 5000);
+  close(r.incomeTax.financeCostReducer, 2000 * 0.2);
+});
+
+test('property: replacement of domestic items relief is deducted', () => {
+  const r = calculate({ property: { rentalIncome: 15000, expenses: 1000, replacementItems: 800, deduction: 'expenses' } }, y2627);
+  close(r.income.property.profit, 13200);
+});
+
+test('property losses: HMRC PIM4210 example (Xiang) carried forward year by year', () => {
+  // 2011-12 loss 5,000; 2012-13 profit 3,000; 2013-14 loss 1,000; 2014-15 profit 8,000
+  const y1 = calculate({ property: { rentalIncome: 10000, expenses: 15000, deduction: 'expenses' } }, y2627);
+  close(y1.income.property.profit, 0); close(y1.income.property.lossesCarriedForward, 5000);
+  const y2 = calculate({ property: { rentalIncome: 10000, expenses: 7000, lossesBroughtForward: 5000, deduction: 'expenses' } }, y2627);
+  close(y2.income.property.profit, 0); close(y2.income.property.lossesCarriedForward, 2000);
+  const y3 = calculate({ property: { rentalIncome: 10000, expenses: 11000, lossesBroughtForward: 2000, deduction: 'expenses' } }, y2627);
+  close(y3.income.property.profit, 0); close(y3.income.property.lossesCarriedForward, 3000);
+  const y4 = calculate({ property: { rentalIncome: 10000, expenses: 2000, lossesBroughtForward: 3000, deduction: 'expenses' } }, y2627);
+  close(y4.income.property.profit, 5000); close(y4.income.property.lossesCarriedForward, 0);
+});
+
+test('property: finance cost credit is capped by profit after losses brought forward', () => {
+  const r = calculate({ employment: { salary: 40000 }, property: { rentalIncome: 12000, expenses: 2000, financeCosts: 6000, lossesBroughtForward: 7000, deduction: 'expenses' } }, y2627);
+  close(r.income.property.profit, 3000);
+  close(r.incomeTax.financeCostReliefBase, 3000);
+  close(r.incomeTax.financeCostsCarriedForward, 3000);
+});
+
+test('rent a room: tax-free up to £7,500, excess taxed, halved if shared', () => {
+  const under = calculate({ employment: { salary: 30000 }, property: { lodgerIncome: 7000 } }, y2627);
+  close(under.income.property.lodgerTaxable, 0);
+  close(under.incomeTax.total, calculate({ employment: { salary: 30000 } }, y2627).incomeTax.total);
+  const over = calculate({ employment: { salary: 30000 }, property: { lodgerIncome: 9000 } }, y2627);
+  close(over.income.property.lodgerTaxable, 1500);
+  close(over.incomeTax.total, calculate({ employment: { salary: 30000 } }, y2627).incomeTax.total + 300);
+  const shared = calculate({ employment: { salary: 30000 }, property: { lodgerIncome: 5000, lodgerShared: true } }, y2627);
+  close(shared.income.property.lodgerTaxable, 1250);
+  // take-home includes the lodger's rent in full
+  close(over.totals.takeHome, calculate({ employment: { salary: 30000 } }, y2627).totals.takeHome + 9000 - 300);
+});
+
+test('rent a room blocks the property allowance', () => {
+  const r = calculate({ property: { rentalIncome: 5000, expenses: 100, lodgerIncome: 8000, deduction: 'property_allowance' } }, y2627);
+  assert.equal(r.income.property.deduction, 'expenses');
+  assert.ok(r.warnings.some((w) => /Rent a Room/.test(w)));
+  const auto = calculate({ property: { rentalIncome: 5000, expenses: 100, lodgerIncome: 8000 } }, y2627);
+  assert.equal(auto.income.property.deduction, 'expenses');
+});

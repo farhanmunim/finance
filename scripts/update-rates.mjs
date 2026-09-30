@@ -165,6 +165,11 @@ async function run() {
       set('childBenefit.hicbc.fullWithdrawal', m(p.text, /earn £([\d,]+) or more, you'll have to pay all/), p.url);
     } catch (e) { problems.push(`HICBC page: ${e.message}`); }
     try {
+      const p = await page('rent-room-in-your-home/the-rent-a-room-scheme');
+      set('incomeTax.rentARoom.threshold', m(p.text, /threshold of £([\d,]+) per year tax-free/), p.url);
+      set('incomeTax.rentARoom.sharedThreshold', m(p.text, /halved to £([\d,]+)/), p.url);
+    } catch (e) { problems.push(`Rent a Room page: ${e.message}`); }
+    try {
       const p = await page('guidance/tax-free-allowances-on-property-and-trading-income');
       set('incomeTax.tradingAllowance', m(p.text, /up to £([\d,]+) each tax year in tax-free allowances for property or trading income/), p.url);
     } catch (e) { problems.push(`Trading allowance page: ${e.message}`); }

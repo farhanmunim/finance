@@ -47,7 +47,23 @@ function bindEvents() {
   $('#rates-reset').addEventListener('click', () => { state.overrides = {}; buildRatesEditor(true); render(); });
 }
 
+function syncItemisedExpenses() {
+  const items = $$('input[data-itemise]', form);
+  const any = items.some((i) => i.value.trim() !== '' && parseNum(i.value) > 0);
+  const total = $('#propExpenses');
+  if (any) {
+    const sum = items.reduce((a, i) => a + parseNum(i.value), 0);
+    total.value = sum.toLocaleString('en-GB', { maximumFractionDigits: 0 });
+    total.readOnly = true;
+    $('#pex-hint').textContent = 'Total of the itemised costs below.';
+  } else if (total.readOnly) {
+    total.readOnly = false;
+    $('#pex-hint').textContent = 'Day-to-day running costs of letting. Not mortgage payments, and not improvements. Itemise below if it helps.';
+  }
+}
+
 function syncVisibility() {
+  syncItemisedExpenses();
   const mode = form.mode.value;
   $('#sec-employment').hidden = mode === 'self';
   $('#sec-self').hidden = mode === 'employed';
@@ -68,7 +84,7 @@ function readForm() {
     y: f.y.value, r: f.r.value, mode,
     sal: f.sal.value, bon: f.bon.value, pm: f.pm.value, pv: f.pv.value, pt: f.pt.value, ben: f.ben.value, eex: f.eex.value, pg: f.pg.value,
     to: f.to.value, ex: f.ex.value, ded: f.ded.value, sep: f.sep.value,
-    rent: f.rent.value, pex: f.pex.value, fc: f.fc.value, fcbf: f.fcbf.value, pded: f.pded.value,
+    rent: f.rent.value, psh: f.psh.value, pex: f.pex.value, pe1: f.pe1.value, pe2: f.pe2.value, pe3: f.pe3.value, pe4: f.pe4.value, pe5: f.pe5.value, rep: f.rep.value, fc: f.fc.value, fcbf: f.fcbf.value, pded: f.pded.value, plbf: f.plbf.value, lod: f.lod.value, lods: f.lods.checked ? '1' : '',
     sav: f.sav.value, div: f.div.value, oth: f.oth.value,
     sl: $$('input[name="sl"]:checked', f).map((c) => c.value).join(','),
     ga: f.ga.value, ma: f.ma.value, bpa: f.bpa.checked ? '1' : '', ch: f.ch.value, cbo: f.cbo.checked ? '1' : '', p: state.period === 'year' ? '' : state.period,
@@ -81,7 +97,11 @@ function readForm() {
       pension: { method: raw.pm, type: raw.pt, value: parseNum(raw.pv) },
     },
     selfEmployment: mode === 'employed' ? {} : { turnover: parseNum(raw.to), expenses: parseNum(raw.ex), deduction: raw.ded, pensionPaid: parseNum(raw.sep) },
-    property: { rentalIncome: parseNum(raw.rent), expenses: parseNum(raw.pex), financeCosts: parseNum(raw.fc), financeCostsBroughtForward: parseNum(raw.fcbf), deduction: raw.pded },
+    property: {
+      rentalIncome: parseNum(raw.rent), share: raw.psh.trim() === '' ? 100 : parseNum(raw.psh), expenses: parseNum(raw.pex), replacementItems: parseNum(raw.rep),
+      financeCosts: parseNum(raw.fc), financeCostsBroughtForward: parseNum(raw.fcbf), lossesBroughtForward: parseNum(raw.plbf),
+      lodgerIncome: parseNum(raw.lod), lodgerShared: !!raw.lods, deduction: raw.pded,
+    },
     other: { savingsInterest: parseNum(raw.sav), dividends: parseNum(raw.div), otherIncome: parseNum(raw.oth) },
     studentLoans: raw.sl ? raw.sl.split(',') : [],
     adjustments: { giftAid: parseNum(raw.ga), marriageAllowance: raw.ma, blindPersonsAllowance: !!raw.bpa, childBenefitChildren: parseNum(raw.ch), childBenefitOptedOut: !!raw.cbo },
@@ -96,11 +116,14 @@ function restoreFromUrl() {
   if (q.y && state.index.years.some((y) => y.id === q.y)) f.y.value = q.y;
   if (q.r) setRadio('r', q.r);
   if (q.mode) setRadio('mode', q.mode);
-  for (const k of ['sal', 'bon', 'pv', 'ben', 'eex', 'pg', 'to', 'ex', 'sep', 'rent', 'pex', 'fc', 'fcbf', 'sav', 'div', 'oth', 'ga', 'ch']) if (q[k] != null && f[k]) f[k].value = q[k];
+  for (const k of ['sal', 'bon', 'pv', 'ben', 'eex', 'pg', 'to', 'ex', 'sep', 'rent', 'psh', 'pex', 'pe1', 'pe2', 'pe3', 'pe4', 'pe5', 'rep', 'fc', 'fcbf', 'plbf', 'lod', 'sav', 'div', 'oth', 'ga', 'ch']) if (q[k] != null && f[k]) f[k].value = q[k];
   if (q.pded) setRadio('pded', q.pded);
   if (q.cbo) f.cbo.checked = true;
   if (q.ov) { try { const o = JSON.parse(q.ov); if (o && typeof o === 'object') state.overrides = o; } catch { /* ignore bad overrides */ } }
-  if (q.rent || q.pex || q.fc || q.fcbf) $('#sec-property').open = true;
+  if (q.lods) f.lods.checked = true;
+  if (q.rent || q.pex || q.fc || q.fcbf || q.lod || q.plbf) $('#sec-property').open = true;
+  if (q.pe1 || q.pe2 || q.pe3 || q.pe4 || q.pe5) $('#pex-itemise').open = true;
+  if (q.plbf || q.lod) $('#prop-more').open = true;
   if (Object.keys(state.overrides).length) $('#sec-rates').open = true;
   if (q.pm) f.pm.value = q.pm;
   if (q.pt) setRadio('pt', q.pt);
@@ -259,10 +282,22 @@ function incomeCard(r, rates) {
     if (s.pensionGross > 0) rows.push(['Personal pension (relief at source)', money(s.pensionGross), { sub: true, note: `You pay ${money(s.pensionPaid)}; the provider adds ${money(s.pensionGross - s.pensionPaid)}. Extends your basic-rate band (Step 3).` }]);
   }
   const pr = i.property;
-  if (pr.rentalIncome > 0) {
-    rows.push(['Rental income', money(pr.rentalIncome)]);
-    if (pr.deduction === 'property_allowance') rows.push(['Property allowance', '− ' + money(pr.propertyAllowanceUsed), { neg: true, sub: true, note: pr.auto ? 'Chosen automatically: it beats deducting expenses and claiming the mortgage interest credit.' : null }]);
-    else rows.push(['Allowable property expenses', '− ' + money(pr.expensesUsed), { neg: true, sub: true, note: pr.auto ? 'Chosen automatically: expenses plus the mortgage interest credit beat the £1,000 property allowance.' : null }]);
+  if (pr.rentalIncomeTotal > 0 || pr.lodgerIncome > 0) {
+    if (pr.rentalIncomeTotal > 0) {
+      rows.push([pr.share < 1 ? `Rental income (your ${fmt.pct(pr.share, 0)} share of ${money(pr.rentalIncomeTotal)})` : 'Rental income', money(pr.rentalIncome)]);
+      if (pr.deduction === 'property_allowance') rows.push(['Property allowance', '− ' + money(pr.propertyAllowanceUsed), { neg: true, sub: true, note: pr.auto ? 'Chosen automatically: it beats deducting expenses and claiming the mortgage interest credit.' : null }]);
+      else {
+        rows.push(['Allowable expenses', '− ' + money(pr.expensesUsed), { neg: true, sub: true, note: pr.auto ? 'Chosen automatically: expenses plus the mortgage interest credit beat the £1,000 property allowance.' : null }]);
+        if (pr.replacementItemsUsed > 0) rows.push(['Replacement of domestic items', '− ' + money(pr.replacementItemsUsed), { neg: true, sub: true }]);
+      }
+      if (pr.currentLoss > 0) rows.push(['Loss this year', money(pr.currentLoss), { sub: true, note: 'Carried forward against future property profits only.' }]);
+    }
+    if (pr.lodgerIncome > 0) {
+      rows.push(['Rent from a lodger', money(pr.lodgerIncome)]);
+      rows.push(['Rent a Room relief', '− ' + money(pr.rentARoomReliefUsed), { neg: true, sub: true, note: pr.lodgerTaxable > 0 ? `Only the amount above ${fmt.gbp(pr.rentARoomThreshold)} is taxed; no expenses are deducted under the scheme.` : `Under the ${fmt.gbp(pr.rentARoomThreshold)} threshold, so tax-free.` }]);
+    }
+    if (pr.lossUsed > 0) rows.push(['Property losses brought forward', '− ' + money(pr.lossUsed), { neg: true, sub: true, note: pr.lossesCarriedForward > 0 ? `${money(pr.lossesCarriedForward)} of losses still carried forward.` : null }]);
+    else if (pr.lossesCarriedForward > 0 && pr.currentLoss === 0) rows.push(['Property losses carried forward', money(pr.lossesCarriedForward), { sub: true, note: 'Nothing to set them against this year.' }]);
     rows.push(['Taxable property profit', money(pr.profit), { total: true, note: pr.financeCosts > 0 ? `Mortgage interest of ${money(pr.financeCosts)} is not deducted here; a 20% tax credit is given in Step 3 instead.` : null }]);
   }
   if (i.savings > 0) rows.push(['Savings interest', money(i.savings)]);
@@ -270,8 +305,15 @@ function incomeCard(r, rates) {
   if (i.otherIncome > 0) rows.push(['Other income', money(i.otherIncome)]);
   rows.push(['Total income for tax', money(i.total), { total: true }]);
   card.append(linesTable(rows));
-  if (pr.rentalIncome > 0) card.append(explain('How landlords are taxed', [
-    el('p', { text: 'Rental profit is rent less allowable running costs. Since April 2020 residential landlords cannot deduct mortgage interest or other finance costs. Instead the tax bill is reduced by 20% of the finance costs (limited to the lower of the finance costs, the property profit and your total non-savings income after allowances). Higher-rate taxpayers therefore pay more than under the old rules. There is no National Insurance on rental income.' }),
+  if (pr.rentalIncomeTotal > 0 || pr.lodgerIncome > 0) card.append(explain('How landlords are taxed', [
+    el('ul', {}, [
+      el('li', { html: '<b>One property business.</b> All your UK lets are added together: rent and other receipts less allowable running costs (agent fees, repairs, insurance, ground rent, professional fees, advertising, travel). Improvements are capital and not allowed; replacing furniture and appliances like for like qualifies for replacement of domestic items relief instead.' }),
+      el('li', { html: '<b>Mortgage interest.</b> Since April 2020 interest and other finance costs on residential lets are not deducted. The tax bill is reduced by 20% of them, limited to the lower of the finance costs, the property profit and your other taxable income; anything unused carries forward.' }),
+      el('li', { html: '<b>Losses</b> are carried forward automatically and can only be set against future profits of the same property business.' }),
+      el('li', { html: '<b>Joint owners</b> each declare their share. Married couples and civil partners are taxed 50/50 unless they have told HMRC (Form 17) that they own in unequal shares.' }),
+      el('li', { html: '<b>Rent a Room</b> applies to a lodger in the home you live in: the first £7,500 (£3,750 if the income is shared) is tax-free. Above that you can pay tax on the excess with no expenses, as shown here, or use the normal method if your expenses are higher.' }),
+      el('li', { html: '<b>Not covered:</b> overseas property (a separate business), capital gains when you sell, the cash basis versus accruals choice (no effect on these figures), and setting losses against general income, which is only possible for certain capital allowances or agricultural expenses. There is no National Insurance on rental income.' }),
+    ]),
   ]));
   card.append(explain('How pensions affect this', [
     el('ul', {}, [

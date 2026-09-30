@@ -159,29 +159,55 @@
         </div>
 
         <details class="section" id="sec-property">
-          <summary><span>Property income<span class="sub">Rent from a buy-to-let or lodger, mortgage interest relief</span></span></summary>
+          <summary><span>Property income<span class="sub">Rent from let property or a lodger, as on your Self Assessment</span></span></summary>
           <div class="body stack">
             <div class="row">
               <div class="field">
                 <label for="rent">Rental income</label>
                 <div class="input-wrap"><span class="affix">£</span><input id="rent" name="rent" data-money placeholder="0"></div>
-                <span class="hint">Total rent received in the year.</span>
+                <span class="hint">Total rent and other receipts from all your UK let properties in the year, before any costs.</span>
               </div>
               <div class="field">
-                <label for="propExpenses">Allowable expenses</label>
-                <div class="input-wrap"><span class="affix">£</span><input id="propExpenses" name="pex" data-money placeholder="0"></div>
-                <span class="hint">Letting fees, repairs, insurance, ground rent. Not mortgage interest.</span>
+                <label for="propShare">Your share of the property</label>
+                <div class="input-wrap"><input id="propShare" name="psh" type="number" min="1" max="100" step="1" placeholder="100"><span class="affix suffix">%</span></div>
+                <span class="hint">100% if it's yours alone. Couples who own jointly are usually taxed 50/50.</span>
               </div>
             </div>
             <div class="field">
-              <label for="financeCosts">Mortgage interest and finance costs</label>
-              <div class="input-wrap"><span class="affix">£</span><input id="financeCosts" name="fc" data-money placeholder="0"></div>
-              <span class="hint">Interest only, not capital repayments. Since 2020 this is not deducted from rent; you get a 20% tax credit on it instead.</span>
+              <label for="propExpenses">Allowable expenses</label>
+              <div class="input-wrap"><span class="affix">£</span><input id="propExpenses" name="pex" data-money placeholder="0"></div>
+              <span class="hint" id="pex-hint">Day-to-day running costs of letting. Not mortgage payments, and not improvements. Itemise below if it helps.</span>
+              <details class="explain options" id="pex-itemise">
+                <summary>Itemise expenses</summary>
+                <div class="body stack">
+                  <div class="row">
+                    <div class="field"><label for="pe1">Letting agent and management fees</label><div class="input-wrap"><span class="affix">£</span><input id="pe1" name="pe1" data-money data-itemise placeholder="0"></div></div>
+                    <div class="field"><label for="pe2">Repairs and maintenance</label><div class="input-wrap"><span class="affix">£</span><input id="pe2" name="pe2" data-money data-itemise placeholder="0"></div><span class="hint">Like-for-like repairs only. Improvements are capital and not allowed.</span></div>
+                  </div>
+                  <div class="row">
+                    <div class="field"><label for="pe3">Insurance, ground rent and service charges</label><div class="input-wrap"><span class="affix">£</span><input id="pe3" name="pe3" data-money data-itemise placeholder="0"></div><span class="hint">Landlord insurance, ground rent, service charges, and any council tax or utilities you pay.</span></div>
+                    <div class="field"><label for="pe4">Legal, accountancy and professional fees</label><div class="input-wrap"><span class="affix">£</span><input id="pe4" name="pe4" data-money data-itemise placeholder="0"></div><span class="hint">Accountant, legal fees for lets of a year or less, referencing and inventory fees.</span></div>
+                  </div>
+                  <div class="field"><label for="pe5">Other costs</label><div class="input-wrap"><span class="affix">£</span><input id="pe5" name="pe5" data-money data-itemise placeholder="0"></div><span class="hint">Advertising, safety certificates, landlord licence, phone and stationery, travel to the property, cleaning and gardening.</span></div>
+                </div>
+              </details>
             </div>
             <div class="field">
-              <label for="financeCostsBf">Unused finance costs brought forward <span class="muted">(optional)</span></label>
-              <div class="input-wrap"><span class="affix">£</span><input id="financeCostsBf" name="fcbf" data-money placeholder="0"></div>
-              <span class="hint">If the credit was capped in earlier years (for example the property made a small profit), the unused interest carries forward. Your last tax return shows it.</span>
+              <label for="replacementItems">Replacing furniture and appliances <span class="muted">(optional)</span></label>
+              <div class="input-wrap"><span class="affix">£</span><input id="replacementItems" name="rep" data-money placeholder="0"></div>
+              <span class="hint">Cost of replacing (not first buying) sofas, beds, white goods, carpets and curtains, less anything you got for the old item. Only the cost of a like-for-like item counts.</span>
+            </div>
+            <div class="row">
+              <div class="field">
+                <label for="financeCosts">Mortgage interest and finance costs</label>
+                <div class="input-wrap"><span class="affix">£</span><input id="financeCosts" name="fc" data-money placeholder="0"></div>
+                <span class="hint">Interest and arrangement fees only, not capital repayments. Not deducted from rent; you get a 20% tax credit instead.</span>
+              </div>
+              <div class="field">
+                <label for="financeCostsBf">Unused finance costs brought forward</label>
+                <div class="input-wrap"><span class="affix">£</span><input id="financeCostsBf" name="fcbf" data-money placeholder="0"></div>
+                <span class="hint">From box 45 of last year's SA105, if the credit was capped.</span>
+              </div>
             </div>
             <div class="field">
               <span class="label">Deduct from rent</span>
@@ -190,8 +216,27 @@
                 <input type="radio" name="pded" id="pded-exp" value="expenses"><label for="pded-exp">Expenses</label>
                 <input type="radio" name="pded" id="pded-pa" value="property_allowance"><label for="pded-pa">£1,000 allowance</label>
               </div>
-              <span class="hint">The property allowance replaces expenses and the mortgage interest credit. "Automatic" uses whichever leaves you with less tax. Rent-a-Room relief for lodgers is not modelled.</span>
+              <span class="hint">The £1,000 property allowance replaces all expenses and the mortgage interest credit. "Automatic" uses whichever leaves you with less tax.</span>
             </div>
+            <details class="explain options" id="prop-more">
+              <summary>More property options</summary>
+              <div class="body stack">
+                <div class="field">
+                  <label for="propLossesBf">Property losses brought forward</label>
+                  <div class="input-wrap"><span class="affix">£</span><input id="propLossesBf" name="plbf" data-money placeholder="0"></div>
+                  <span class="hint">Unused losses from earlier years (box 39 on last year's SA105). They only reduce property profits.</span>
+                </div>
+                <div class="field">
+                  <label for="lodger">Rent from a lodger in your own home</label>
+                  <div class="input-wrap"><span class="affix">£</span><input id="lodger" name="lod" data-money placeholder="0"></div>
+                  <span class="hint">Rent a Room: the first £7,500 a year is tax-free and only the excess is taxed. Enter the gross rent; no expenses are needed.</span>
+                </div>
+                <label class="toggle">
+                  <span><span class="label">Lodger income is shared with someone else</span><span class="sub">Halves the Rent a Room threshold to £3,750</span></span>
+                  <input type="checkbox" id="lodgerShared" name="lods" value="1"><span class="switch"></span>
+                </label>
+              </div>
+            </details>
           </div>
         </details>
 

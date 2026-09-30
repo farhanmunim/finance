@@ -11,6 +11,10 @@
     "marriageAllowanceTransfer": 1260,
     "tradingAllowance": 1000,
     "propertyAllowance": 1000,
+    "rentARoom": {
+      "threshold": 7500,
+      "sharedThreshold": 3750
+    },
     "financeCostReliefRate": 0.2,
     "basicRate": 0.2,
     "bands": {
@@ -296,6 +300,25 @@
       "covers": [
         "Relief limit (100% of earnings or £3,600)",
         "Annual allowance"
+      ]
+    },
+    {
+      "id": "rent-a-room",
+      "title": "Rent a room in your home: the Rent a Room Scheme",
+      "url": "https://www.gov.uk/rent-room-in-your-home/the-rent-a-room-scheme",
+      "covers": [
+        "Rent a Room threshold"
+      ]
+    },
+    {
+      "id": "rental-income",
+      "title": "Work out your rental income when you let property",
+      "url": "https://www.gov.uk/guidance/income-tax-when-you-rent-out-a-property-working-out-your-rental-income",
+      "covers": [
+        "Allowable expenses",
+        "Replacement of domestic items relief",
+        "Property losses",
+        "Joint ownership"
       ]
     }
   ]
