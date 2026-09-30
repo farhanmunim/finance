@@ -1,4 +1,4 @@
-import { calculate, marginalRate, applyOverrides } from './tax-engine.js?v=eec45b01ae';
+import { calculate, marginalRate, applyOverrides } from './tax-engine.js?v=fdea76ad1f';
 import { fmt, parseNum, initMoneyInputs, $, $$, el, linesTable, urlState, debounce, loadJSON } from './ui.js?v=4673fe000f';
 
 const state = { index: null, rates: {}, period: 'year', overrides: {}, editorKey: '' };
@@ -6,25 +6,31 @@ const form = $('#form');
 const results = $('#results');
 
 // ------------------------------------------------------------------ boot
+function showError(message) {
+  results.innerHTML = '';
+  results.append(el('div', { class: 'card' }, [
+    el('h2', { text: 'Something went wrong' }),
+    el('p', { class: 'muted', style: 'margin-top:8px', text: message }),
+    el('p', { style: 'margin-top:12px' }, el('button', { type: 'button', class: 'btn primary', text: 'Reload the page', onclick: () => location.reload() })),
+  ]));
+}
+
 async function init() {
   try {
     state.index = await loadJSON('/data/tax-years/index.json');
+    const sel = $('#taxYear');
+    for (const y of state.index.years) sel.append(el('option', { value: y.id, text: `${y.label}${y.id === state.index.default ? ' (current)' : ''}` }));
+    sel.value = state.index.default;
+    restoreFromUrl();
+    initMoneyInputs(form);
+    bindEvents();
+    await ensureRates(sel.value);
+    syncVisibility();
+    buildRatesEditor();
+    render();
   } catch (e) {
-    results.innerHTML = '';
-    results.append(el('div', { class: 'card note-box warn', text: `Could not load tax rates: ${e.message}` }));
-    return;
+    showError(`The tax rates could not be loaded (${e.message}). Check your connection and try again.`);
   }
-  const sel = $('#taxYear');
-  for (const y of state.index.years) sel.append(el('option', { value: y.id, text: `${y.label}${y.id === state.index.default ? ' (current)' : ''}` }));
-  sel.value = state.index.default;
-
-  restoreFromUrl();
-  initMoneyInputs(form);
-  bindEvents();
-  await ensureRates(sel.value);
-  syncVisibility();
-  buildRatesEditor();
-  render();
 }
 
 async function ensureRates(id) {
@@ -39,9 +45,18 @@ function bindEvents() {
   form.addEventListener('input', (e) => { if (e.target.closest('#rates-editor')) return; rerender(); });
   form.addEventListener('change', async (e) => {
     if (e.target.closest('#rates-editor')) return;
-    if (e.target.id === 'taxYear') { results.setAttribute('aria-busy', 'true'); await ensureRates(e.target.value); results.removeAttribute('aria-busy'); }
+    // Typed fields already re-render on input; a late 'change' from one of them (fired on the
+    // mousedown that moves focus) must not rebuild the results under a control being clicked.
+    if (e.target.matches('input:not([type=radio]):not([type=checkbox])')) return;
+    if (e.target.id === 'taxYear') {
+      results.setAttribute('aria-busy', 'true');
+      try { await ensureRates(e.target.value); }
+      catch (err) { results.removeAttribute('aria-busy'); showError(`The ${e.target.selectedOptions[0]?.textContent || 'selected'} tax rates could not be loaded (${err.message}).`); return; }
+      results.removeAttribute('aria-busy');
+    }
     syncVisibility(); buildRatesEditor(); render();
   });
+  $('#form-reset').addEventListener('click', () => { history.replaceState(null, '', location.pathname); location.reload(); });
   form.addEventListener('submit', (e) => e.preventDefault());
   $('#rates-editor').addEventListener('input', debounce(onRateEdit, 120));
   $('#rates-reset').addEventListener('click', () => { state.overrides = {}; buildRatesEditor(true); render(); });
@@ -103,7 +118,7 @@ function readForm() {
     },
     selfEmployment: !inc.has('se') ? {} : { turnover: parseNum(raw.to), expenses: parseNum(raw.ex), deduction: raw.ded, pensionPaid: parseNum(raw.sep) },
     property: !inc.has('prop') ? {} : {
-      rentalIncome: parseNum(raw.rent), share: raw.psh.trim() === '' ? 100 : parseNum(raw.psh), expenses: parseNum(raw.pex), replacementItems: parseNum(raw.rep),
+      rentalIncome: parseNum(raw.rent), share: raw.psh.trim() === '' || parseNum(raw.psh) <= 0 ? 100 : Math.min(100, parseNum(raw.psh)), expenses: parseNum(raw.pex), replacementItems: parseNum(raw.rep),
       financeCosts: parseNum(raw.fc), financeCostsBroughtForward: parseNum(raw.fcbf), lossesBroughtForward: parseNum(raw.plbf),
       lodgerIncome: parseNum(raw.lod), lodgerShared: !!raw.lods, deduction: raw.pded,
     },
@@ -153,8 +168,12 @@ function render() {
   urlState.write(raw);
   const rates = applyOverrides(base, state.overrides);
   state.effective = rates;
-  const r = calculate(input, rates);
-  const m = marginalRate(input, rates);
+  let r, m;
+  try { r = calculate(input, rates); m = marginalRate(input, rates); }
+  catch (e) { showError(`The calculation failed (${e.message}). Try resetting any custom rates.`); return; }
+  // Remember which explanations are open and where focus is, so re-rendering keeps them.
+  const openSummaries = new Set($$('details[open] > summary', results).map((x) => x.textContent));
+  const focused = document.activeElement && results.contains(document.activeElement) ? document.activeElement.id : null;
   results.innerHTML = '';
   results.append(heroCard(r, rates), summaryCard(r, m, rates));
   if (r.collection && (r.collection.selfAssessment.likelyNeedsReturn || Math.abs(r.collection.selfAssessment.balancingPayment) > 0.5)) results.append(collectionCard(r, rates));
@@ -163,6 +182,9 @@ function render() {
   if (r.giving) results.append(givingCard(r, rates));
   if (r.hicbc) results.append(hicbcCard(r, rates));
   results.append(sourcesCard(base));
+  for (const sm of $$('details > summary', results)) if (openSummaries.has(sm.textContent)) sm.parentElement.open = true;
+  if (state.refocusPeriod) { $(`#period-${state.period}`, results)?.focus({ preventScroll: true }); state.refocusPeriod = false; }
+  else if (focused) $(`#${focused}`, results)?.focus({ preventScroll: true });
   $('#ms-month').textContent = fmt.gbp(r.totals.takeHomeMonthly);
   $('#ms-year').textContent = fmt.gbp(r.totals.takeHome);
   $('#mobile-summary').hidden = r.totals.cashIncome <= 0;
@@ -177,7 +199,7 @@ function periodSwitch() {
   for (const p of ['year', 'month', 'week']) {
     const id = `period-${p}`;
     wrap.append(
-      el('input', { type: 'radio', name: 'period', id, value: p, checked: state.period === p, onchange: () => { state.period = p; render(); } }),
+      el('input', { type: 'radio', name: 'period', id, value: p, checked: state.period === p, onchange: (e) => { e.stopPropagation(); state.period = p; state.refocusPeriod = true; render(); } }),
       el('label', { for: id, text: p[0].toUpperCase() + p.slice(1) }),
     );
   }
@@ -190,7 +212,7 @@ function explain(title, bodyNodes) {
 
 function heroCard(r, rates) {
   const t = r.totals;
-  const card = el('div', { class: 'card' });
+  const card = el('div', { class: 'card', 'aria-live': 'polite' });
   card.append(el('div', { class: 'card-header' }, [
     el('div', {}, [el('h2', { text: 'Your take-home pay' }), el('p', {}, [`Tax year ${rates.label}${r.region === 'scotland' ? ' · Scottish rates' : ''} `, Object.keys(state.overrides).length ? el('span', { class: 'badge', text: `Custom rates (${Object.keys(state.overrides).length} changed)` }) : null])]),
     periodSwitch(),
@@ -403,7 +425,7 @@ function incomeTaxCard(r, rates) {
   card.append(el('div', { class: 'card-header' }, [el('div', {}, [el('h2', { text: 'Step 3 · Income tax' }), el('p', { text: r.region === 'scotland' ? 'Scottish rates on earnings; UK rates on savings and dividends.' : 'Taxable income is filled into the bands from the bottom up.' })])]));
   const rows = [];
   const pieceRows = (pieces, group) => pieces.map((p) => [
-    el('span', {}, [el('span', { class: 'band-rate', text: fmt.pct(p.rate, 2) }), ` ${p.name}`]),
+    el('span', { class: 'band-line' }, [el('span', { class: 'band-rate', text: fmt.pct(p.rate, 2) }), el('span', { text: p.name })]),
     money(p.tax),
     { mid: money(p.amount) },
   ]);
@@ -434,13 +456,13 @@ function niCard(r, rates) {
   if (r.income.employment.grossPay > 0) {
     rows.push([el('b', { text: 'Class 1 (employee)' }), '', { mid: '' }]);
     rows.push(['Earnings for NI', '', { mid: money(c1.niablePay) }]);
-    rows.push([el('span', {}, [el('span', { class: 'band-rate', text: fmt.pct(c1.mainRate, 0) }), ` on ${fmt.gbp(c1.primaryThreshold)} to ${fmt.gbp(c1.upperEarningsLimit)}`]), money(c1.main), { mid: money(Math.min(Math.max(c1.niablePay - c1.primaryThreshold, 0), c1.upperEarningsLimit - c1.primaryThreshold)) }]);
-    if (c1.upper > 0) rows.push([el('span', {}, [el('span', { class: 'band-rate', text: fmt.pct(c1.upperRate, 0) }), ` above ${fmt.gbp(c1.upperEarningsLimit)}`]), money(c1.upper), { mid: money(c1.niablePay - c1.upperEarningsLimit) }]);
+    rows.push([el('span', { class: 'band-line' }, [el('span', { class: 'band-rate', text: fmt.pct(c1.mainRate, 0) }), el('span', { text: `on ${fmt.gbp(c1.primaryThreshold)} to ${fmt.gbp(c1.upperEarningsLimit)}` })]), money(c1.main), { mid: money(Math.min(Math.max(c1.niablePay - c1.primaryThreshold, 0), c1.upperEarningsLimit - c1.primaryThreshold)) }]);
+    if (c1.upper > 0) rows.push([el('span', { class: 'band-line' }, [el('span', { class: 'band-rate', text: fmt.pct(c1.upperRate, 0) }), el('span', { text: `above ${fmt.gbp(c1.upperEarningsLimit)}` })]), money(c1.upper), { mid: money(c1.niablePay - c1.upperEarningsLimit) }]);
   }
   if (r.income.selfEmployment.profit > 0) {
     rows.push([el('b', { text: 'Class 4 (self-employed)' }), '', { mid: '' }]);
-    rows.push([el('span', {}, [el('span', { class: 'band-rate', text: fmt.pct(c4.mainRate, 0) }), ` on ${fmt.gbp(c4.lowerProfitsLimit)} to ${fmt.gbp(c4.upperProfitsLimit)}`]), money(c4.main), { mid: money(c4.mainBandProfits - c4.displacedProfits), note: c4.annualMaximumApplied ? 'Reduced because your employee NI already covers part of this band (annual maximum rule).' : null }]);
-    if (c4.upper > 0) rows.push([el('span', {}, [el('span', { class: 'band-rate', text: fmt.pct(c4.upperRate, 0) }), c4.annualMaximumApplied ? ' on remaining profits' : ` above ${fmt.gbp(c4.upperProfitsLimit)}`]), money(c4.upper), { mid: money(Math.max(0, c4.profit - c4.upperProfitsLimit) + c4.displacedProfits) }]);
+    rows.push([el('span', { class: 'band-line' }, [el('span', { class: 'band-rate', text: fmt.pct(c4.mainRate, 0) }), el('span', { text: `on ${fmt.gbp(c4.lowerProfitsLimit)} to ${fmt.gbp(c4.upperProfitsLimit)}` })]), money(c4.main), { mid: money(c4.mainBandProfits - c4.displacedProfits), note: c4.annualMaximumApplied ? 'Reduced because your employee NI already covers part of this band (annual maximum rule).' : null }]);
+    if (c4.upper > 0) rows.push([el('span', { class: 'band-line' }, [el('span', { class: 'band-rate', text: fmt.pct(c4.upperRate, 0) }), el('span', { text: c4.annualMaximumApplied ? 'on remaining profits' : `above ${fmt.gbp(c4.upperProfitsLimit)}` })]), money(c4.upper), { mid: money(Math.max(0, c4.profit - c4.upperProfitsLimit) + c4.displacedProfits) }]);
     rows.push(['Class 2', money(0), { mid: '', note: c2.status === 'credited' ? `Profits are above ${fmt.gbp(c2.smallProfitsThreshold)}, so you get NI credits for free.` : `Profits are below ${fmt.gbp(c2.smallProfitsThreshold)}. You can pay voluntary Class 2 (${fmt.gbp(c2.weeklyRate, 2)} a week, ${fmt.gbp(c2.voluntaryAnnual)} a year) to protect your State Pension record - not included here.` }]);
   }
   rows.push(['Total National Insurance', money(ni.total), { total: true, mid: '' }]);
@@ -624,7 +646,8 @@ function onRateEdit(e) {
   const raw = input.value.trim();
   const baseVal = input.dataset.base === '' ? null : Number(input.dataset.base);
   let v = raw === '' ? null : parseNum(raw);
-  if (v != null && type === 'pct') v = Math.round(v * 100) / 10000;
+  if (v != null && type === 'pct') v = Math.min(0.99, Math.max(0, Math.round(v * 100) / 10000));
+  if (v != null && type !== 'pct') v = Math.max(0, v);
   if (v == null || (baseVal != null && Math.abs(v - baseVal) < 1e-9)) delete state.overrides[path];
   else state.overrides[path] = v;
   input.closest('.input-wrap').classList.toggle('changed', state.overrides[path] != null);

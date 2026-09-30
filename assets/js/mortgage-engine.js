@@ -117,6 +117,7 @@ export function amortise(o) {
     }
   }
   if (m >= maxMonths) warnings.push('The loan takes more than 100 years to repay at this payment.');
+  else if (type === 'repayment' && num(o.payment) > 0 && m > termMonths) warnings.push(`At this payment the loan takes ${Math.round(m / 12)} years to clear, longer than the ${Math.round(termMonths / 12)}-year term${fixedMonths > 0 ? ' - the higher rate after the deal makes a big difference' : ''}.`);
 
   return {
     ok: true,

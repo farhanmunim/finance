@@ -34,8 +34,21 @@ export function applyOverrides(rates, overrides = {}) {
     let o = out;
     for (const k of keys.slice(0, -1)) { if (o[k] == null) o[k] = {}; o = o[k]; }
     const last = keys[keys.length - 1];
-    o[last] = value === 'null' ? null : Number(value);
+    let v = value === 'null' ? null : Number(value);
+    if (v != null && !Number.isFinite(v)) continue;
+    if (v != null && /rate|Rate|Share/.test(last)) v = Math.min(0.99, Math.max(0, v)); // a rate of 100% would divide by zero when grossing up
+    if (v != null && v < 0) v = 0;
+    o[last] = v;
   }
+  // Only the last band may be open-ended; keep band limits and NI thresholds in order.
+  for (const key of ['ruk', 'scotland']) {
+    const bands = out.incomeTax?.bands?.[key];
+    if (!bands) continue;
+    bands.forEach((b, i) => { if (i < bands.length - 1 && b.upTo == null) b.upTo = (bands[i - 1]?.upTo ?? 0); if (i > 0 && b.upTo != null && bands[i - 1].upTo != null && b.upTo < bands[i - 1].upTo) b.upTo = bands[i - 1].upTo; });
+  }
+  const c1 = out.nationalInsurance?.class1, c4 = out.nationalInsurance?.class4;
+  if (c1 && c1.upperEarningsLimit < c1.primaryThreshold) c1.upperEarningsLimit = c1.primaryThreshold;
+  if (c4 && c4.upperProfitsLimit < c4.lowerProfitsLimit) c4.upperProfitsLimit = c4.lowerProfitsLimit;
   return out;
 }
 

@@ -1,5 +1,5 @@
-import { amortise, compare, overpayVsSave, breakEvenSavingsRate, rateSensitivity, ltvBands } from './mortgage-engine.js?v=b7bb89cbe1';
-import { propertyIncrementalTax } from './tax-engine.js?v=eec45b01ae';
+import { amortise, compare, overpayVsSave, breakEvenSavingsRate, rateSensitivity, ltvBands } from './mortgage-engine.js?v=61f5bba74e';
+import { propertyIncrementalTax } from './tax-engine.js?v=fdea76ad1f';
 import { fmt, parseNum, initMoneyInputs, $, $$, el, linesTable, urlState, debounce, loadJSON } from './ui.js?v=4673fe000f';
 
 const form = $('#form');
@@ -14,7 +14,7 @@ async function init() {
   initMoneyInputs(form);
   const rerender = debounce(() => { syncVisibility(); render(); }, 80);
   form.addEventListener('input', rerender);
-  form.addEventListener('change', () => { syncVisibility(); render(); });
+  form.addEventListener('change', (e) => { if (e.target.matches('input:not([type=radio]):not([type=checkbox])')) return; syncVisibility(); render(); });
   form.addEventListener('submit', (e) => e.preventDefault());
   $('#deposit').addEventListener('blur', formatDeposit);
   let lastWidth = window.innerWidth;
@@ -39,6 +39,7 @@ function savingsTaxFor(band) {
   if (band === 'isa') return { rate: 0, allowance: 0, label: 'ISA, no tax' };
   const it = state.rates?.incomeTax;
   const fallback = { basic: [0.2, 1000], higher: [0.4, 500], additional: [0.45, 0] };
+  if (!fallback[band]) band = 'basic';
   const rate = it ? (it.bands.ruk.find((b) => b.id === band)?.rate ?? fallback[band][0]) : fallback[band][0];
   const allowance = it ? (it.savings.personalSavingsAllowance[band] ?? fallback[band][1]) : fallback[band][1];
   return { rate, allowance, label: `${fmt.pct(rate, 0)} above a ${fmt.gbp(allowance)} savings allowance` };
@@ -51,8 +52,15 @@ function formatDeposit() {
   f.dep.value = f.dt.value === 'percent' ? String(Math.round(n * 100) / 100) : n.toLocaleString('en-GB', { maximumFractionDigits: 0 });
 }
 
+let lastDepositType = null;
 function syncVisibility() {
   const f = form;
+  // Switching £ <-> % converts the figure so the deposit stays the same
+  if (lastDepositType && lastDepositType !== f.dt.value) {
+    const price = parseNum(f.pv.value), n = parseNum(f.dep.value);
+    if (price > 0 && n > 0) f.dep.value = f.dt.value === 'percent' ? String(Math.round((n / price) * 10000) / 100) : String(Math.round(price * n / 100));
+  }
+  lastDepositType = f.dt.value;
   $('#depAffix').textContent = f.dt.value === 'percent' ? '%' : '£';
   if (document.activeElement !== f.dep) formatDeposit();
   $('#payment-field').hidden = !f.op.checked;
@@ -71,7 +79,8 @@ function readForm() {
   const depositInput = parseNum(raw.dep);
   const deposit = raw.dt === 'percent' ? price * depositInput / 100 : depositInput;
   const principal = Math.max(0, price - deposit);
-  const termYears = Math.max(1, Math.min(40, Math.round(parseNum(raw.t)) || 25));
+  const termYearsRaw = Math.round(parseNum(raw.t)) || 25;
+  const termYears = Math.max(1, Math.min(40, termYearsRaw));
   const opts = {
     principal,
     termMonths: termYears * 12,
@@ -94,7 +103,7 @@ function readForm() {
     otherIncome: parseNum(raw.oi),
     region: raw.reg,
   };
-  return { raw, opts, price, deposit, principal, termYears, extras };
+  return { raw, opts, price, deposit, principal, termYears, termClamped: termYearsRaw !== termYears, extras };
 }
 
 function restoreFromUrl() {
@@ -114,20 +123,24 @@ function restoreFromUrl() {
 }
 
 function render() {
-  const { raw, opts, price, deposit, principal, termYears, extras } = readForm();
+  const { raw, opts, price, deposit, principal, termYears, termClamped, extras } = readForm();
   urlState.write(raw);
   const note = $('#loan-note');
-  if (principal > 0 && price > 0) {
+  const depositTooBig = price > 0 && deposit >= price;
+  if (depositTooBig) {
+    note.innerHTML = '<span style="color:var(--warn)">The deposit must be less than the property value.</span>';
+  } else if (principal > 0 && price > 0) {
     const ltv = principal / price;
-    note.innerHTML = `Loan amount <b class="num">${fmt.gbp(principal)}</b> · loan-to-value <b class="num">${fmt.pct(ltv, 0)}</b>${ltv > 0.95 ? ' <span style="color:var(--warn)">(few lenders go above 95%)</span>' : ''}`;
+    note.innerHTML = `Loan amount <b class="num">${fmt.gbp(principal)}</b> · loan-to-value <b class="num">${fmt.pct(ltv, 0)}</b>${ltv > 0.95 ? ' <span style="color:var(--warn)">(few lenders go above 95%)</span>' : ''}${termClamped ? ` · term limited to ${termYears} years` : ''}`;
   } else {
     note.textContent = 'Enter a property value and deposit to see your loan amount.';
   }
 
+  const openSummaries = new Set($$('details[open] > summary', results).map((x) => x.textContent));
   results.innerHTML = '';
   $('#mobile-summary').hidden = true;
   if (principal <= 0 || raw.r.trim() === '') {
-    results.append(el('div', { class: 'card' }, el('p', { class: 'muted', text: 'Enter your property value, deposit and interest rate to see your payments.' })));
+    results.append(el('div', { class: 'card' }, el('p', { class: 'muted', text: depositTooBig ? 'The deposit must be less than the property value.' : 'Enter your property value, deposit and interest rate to see your payments.' })));
     return;
   }
   const c = compare(opts);
@@ -141,10 +154,11 @@ function render() {
   results.append(chartCard(c, opts));
   results.append(saveCard(c, opts, extras));
   if (extras.rentMonthly > 0) results.append(btlCard(c.base, opts, extras, price));
-  results.append(sensitivityCard(opts));
+  if (!opts.payment) results.append(sensitivityCard(opts));
   results.append(ltvCard(price, principal));
   results.append(scheduleCard(main, c));
   results.append(assumptionsCard(opts));
+  for (const sm of $$('details > summary', results)) if (openSummaries.has(sm.textContent)) sm.parentElement.open = true;
   $('#ms-pay').textContent = fmt.gbp(main.initialPayment, 2);
   $('#ms-int').textContent = fmt.gbp(main.totalInterest);
   $('#mobile-summary').hidden = false;
@@ -166,7 +180,7 @@ function payoffDate(months) {
 function heroCard(c, opts, principal, price, termYears) {
   const r = c.hasOverpayments ? c.withOverpayments : c.base;
   const io = opts.type === 'interest_only';
-  const card = el('div', { class: 'card' });
+  const card = el('div', { class: 'card', 'aria-live': 'polite' });
   card.append(el('div', { class: 'card-header' }, [el('div', {}, [el('h2', { text: c.hasOverpayments ? 'Your mortgage with overpayments' : 'Your mortgage' }), el('p', { text: `${fmt.gbp(principal)} over ${termYears} years at ${opts.annualRate}%${opts.fixedMonths ? ` for ${opts.fixedMonths / 12} years, then ${opts.revertRate ?? opts.annualRate}%` : ''} · ${io ? 'interest only' : 'repayment'}` })])]));
   const paymentSub = r.paymentChanges.length > 1 ? `then ${fmt.gbp(r.paymentChanges[1].amount, 2)} from month ${r.paymentChanges[1].fromMonth}` : 'a month';
   card.append(el('div', { class: 'hero' }, [
@@ -448,19 +462,20 @@ function scheduleCard(run, c) {
   card.append(el('summary', {}, el('span', {}, ['Year-by-year breakdown', el('span', { class: 'sub', text: c.hasOverpayments ? 'With your overpayments included' : 'Standard payments' })])));
   const body = el('div', { class: 'body' });
   const table = el('table', { class: 'lines' });
-  table.append(el('thead', {}, el('tr', {}, ['Year', 'Paid', 'Interest', 'Loan repaid', 'Balance'].map((h, i) => el('th', { text: h, style: i ? 'text-align:right' : '' })))));
+  const narrow = (results.clientWidth || 640) < 420; // five money columns do not fit on a phone; "Paid" = interest + loan repaid
+  table.append(el('thead', {}, el('tr', {}, ['Year', ...(narrow ? [] : ['Paid']), 'Interest', 'Loan repaid', 'Balance'].map((h, i) => el('th', { text: h, style: i ? 'text-align:right' : '' })))));
   const tbody = el('tbody');
   for (const y of run.yearly) {
     tbody.append(el('tr', {}, [
       el('td', { text: String(y.year) }),
-      el('td', { class: 'num', style: 'text-align:right', text: fmt.gbp(y.paid) }),
+      narrow ? null : el('td', { class: 'num', style: 'text-align:right', text: fmt.gbp(y.paid) }),
       el('td', { class: 'num', style: 'text-align:right', text: fmt.gbp(y.interest) }),
       el('td', { class: 'num', style: 'text-align:right', text: fmt.gbp(y.principal) }),
       el('td', { class: 'num', style: 'text-align:right', text: fmt.gbp(y.closing) }),
     ]));
   }
   table.append(tbody);
-  body.append(el('div', { style: 'overflow-x:auto' }, table));
+  body.append(el('div', { class: 'table-scroll' }, table));
   if (run.paymentChanges.length > 1) {
     body.append(el('h3', { text: 'Payment changes', style: 'margin:16px 0 8px' }));
     body.append(linesTable(run.paymentChanges.map((p) => [`From month ${p.fromMonth} at ${p.rate}%`, fmt.gbp(p.amount, 2)])));

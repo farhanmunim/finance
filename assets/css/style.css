@@ -187,7 +187,7 @@ details.section > .body { padding: 4px var(--space-3) var(--space-3); }
   .hero .tile { grid-row: span 3; grid-template-rows: subgrid; row-gap: 0; }
   .stat { grid-row: span 3; grid-template-rows: subgrid; row-gap: 0; }
 }
-.badge { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 999px; font-size: 0.75rem; font-weight: 600; background: var(--warn-soft); color: var(--warn); }
+.badge { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 999px; font-size: 0.78rem; font-weight: 600; background: var(--warn-soft); color: #8a3e05; }
 .badge.good { background: var(--good-soft); color: var(--good); }
 
 /* Breakdown tables: scroll sideways only when they truly cannot fit */
@@ -206,7 +206,8 @@ details.section > .body { padding: 4px var(--space-3) var(--space-3); }
 .lines td .note { display: block; color: var(--muted); font-size: 0.78rem; white-space: normal; font-weight: 400; }
 .lines td.neg { color: var(--text-2); }
 .lines tr:last-child td { border-bottom: 0; }
-.lines .band-rate { display: inline-block; width: 4.6em; color: var(--muted); font-size: 0.78rem; }
+.lines .band-line { display: flex; gap: 6px; align-items: baseline; }
+.lines .band-rate { flex: none; width: 4.4em; color: var(--muted); font-size: 0.78rem; }
 .lines tr.hl td { background: var(--accent-soft); }
 
 /* Split bar */
@@ -218,7 +219,7 @@ details.section > .body { padding: 4px var(--space-3) var(--space-3); }
 /* Notes */
 .note-box { border-radius: var(--radius-sm); padding: var(--space-2) var(--space-3); font-size: var(--text-sm); background: var(--surface-2); color: var(--text-2); overflow-wrap: anywhere; }
 .note-box.warn { background: var(--warn-soft); color: var(--warn); }
-.note-box.good { background: var(--good-soft); color: var(--good); }
+.note-box.good { background: var(--good-soft); color: #0b6b2e; }
 .note-box ul { margin: 6px 0 0; padding-left: 18px; }
 .note-box p + p { margin-top: 6px; }
 
@@ -242,7 +243,7 @@ details.explain p + p { margin-top: 8px; }
 .rates-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 9.5rem), 1fr)); gap: var(--space-2); }
 .rates-grid .field label { font-weight: 500; font-size: 0.78rem; color: var(--text-2); }
 .rates-grid .input-wrap { min-height: 40px; }
-.rates-grid .input-wrap input { padding: 6px 8px; font-size: 15px; }
+.rates-grid .input-wrap input { padding: 6px 8px; font-size: 16px; }
 .rates-grid .input-wrap.changed { border-color: var(--warn); background: var(--warn-soft); }
 
 /* Sources */
@@ -291,7 +292,7 @@ details.explain p + p { margin-top: 8px; }
 /* Sticky summary on phones/tablets (results are below the form there) */
 .mobile-summary { display: none; }
 @media (max-width: 959px) {
-  .mobile-summary { display: flex; position: fixed; left: 0; right: 0; bottom: 0; z-index: 30; background: rgba(255,255,255,.96); backdrop-filter: blur(8px); border-top: 1px solid var(--border); padding: 10px var(--gutter) calc(10px + env(safe-area-inset-bottom)); align-items: center; justify-content: space-between; gap: var(--space-2); }
+  .mobile-summary { display: flex; position: fixed; left: 0; right: 0; bottom: 0; z-index: 30; background: rgba(255,255,255,.96); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); border-top: 1px solid var(--border); padding: 10px var(--gutter) calc(10px + env(safe-area-inset-bottom)); align-items: center; justify-content: space-between; gap: var(--space-2); }
   .mobile-summary .k { font-size: 0.72rem; color: var(--muted); font-weight: 600; }
   .mobile-summary .v { font-weight: 700; font-size: var(--text-lg); font-variant-numeric: tabular-nums; }
   .mobile-summary a { font-size: 0.8rem; font-weight: 600; white-space: nowrap; }

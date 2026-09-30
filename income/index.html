@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Income Tax Calculator - UK take-home pay, self-employed and landlord tax</title>
   <meta name="description" content="Free UK income tax calculator: take-home pay, self-employment, property income, dividends, pensions, student loans and National Insurance, with every step of the calculation shown.">
-  <link rel="stylesheet" href="/assets/css/style.css?v=f060f2f332">
+  <link rel="stylesheet" href="/assets/css/style.css?v=c82acf98b6">
   <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
   <script defer src="https://mochi.farhan.app/script.js" data-website-id="f43f5c82-286b-40d3-9101-30af20fb7742" data-exclude-search="true"></script>
 </head>
@@ -332,10 +332,13 @@
           </div>
         </details>
 
-        <p class="muted small" style="margin-top:16px">Results update as you type. Your inputs are saved in the page address so you can bookmark or share them.</p>
+        <div style="margin-top:16px; display:flex; flex-wrap:wrap; gap:12px; align-items:center; justify-content:space-between">
+          <p class="muted small">Results update as you type. Your inputs are saved in the page address so you can bookmark or share them.</p>
+          <button type="button" class="btn" id="form-reset">Start again</button>
+        </div>
       </div>
 
-      <div class="results-col" id="results" aria-live="polite">
+      <div class="results-col" id="results">
         <div class="card"><p class="muted">Loading tax rates…</p></div>
       </div>
     </form>
@@ -350,6 +353,6 @@
   <footer class="site-footer">
     <p>Figures are based on published GOV.UK rates and are for guidance only. Always check your own position with HMRC or a qualified adviser.</p>
   </footer>
-  <script type="module" src="/assets/js/income.js?v=30a5542e48"></script>
+  <script type="module" src="/assets/js/income.js?v=d6b205e49c"></script>
 </body>
 </html>
