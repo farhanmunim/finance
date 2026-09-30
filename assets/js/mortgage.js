@@ -1,6 +1,6 @@
 import { amortise, compare, overpayVsSave, breakEvenSavingsRate, rateSensitivity, ltvBands } from './mortgage-engine.js?v=61f5bba74e';
 import { propertyIncrementalTax } from './tax-engine.js?v=fdea76ad1f';
-import { fmt, parseNum, initMoneyInputs, initNumberInputs, $, $$, el, linesTable, urlState, debounce, loadJSON } from './ui.js?v=1c3761c698';
+import { fmt, parseNum, initMoneyInputs, initNumberInputs, captionTables, $, $$, el, linesTable, urlState, debounce, loadJSON } from './ui.js?v=86e473baa6';
 
 const form = $('#form');
 const results = $('#results');
@@ -147,7 +147,7 @@ function render() {
   const c = compare(opts);
   const main = c.hasOverpayments ? c.withOverpayments : c.base;
   if (!main.ok) {
-    results.append(el('div', { class: 'card note-box warn' }, main.warnings.map((w) => el('p', { text: w }))));
+    results.append(el('section', { class: 'card note-box warn' }, main.warnings.map((w) => el('p', { text: w }))));
     return;
   }
   results.append(heroCard(c, opts, principal, price, termYears));
@@ -159,6 +159,7 @@ function render() {
   results.append(ltvCard(price, principal));
   results.append(scheduleCard(main, c));
   results.append(assumptionsCard(opts));
+  captionTables(results);
   for (const sm of $$('details > summary', results)) if (openSummaries.has(sm.textContent)) sm.parentElement.open = true;
   $('#ms-pay').textContent = fmt.gbp(main.initialPayment, 2);
   $('#ms-int').textContent = fmt.gbp(main.totalInterest);
@@ -181,7 +182,7 @@ function payoffDate(months) {
 function heroCard(c, opts, principal, price, termYears) {
   const r = c.hasOverpayments ? c.withOverpayments : c.base;
   const io = opts.type === 'interest_only';
-  const card = el('div', { class: 'card', 'aria-live': 'polite' });
+  const card = el('section', { class: 'card', 'aria-live': 'polite' });
   card.append(el('div', { class: 'card-header' }, [el('div', {}, [el('h2', { text: c.hasOverpayments ? 'Your mortgage with overpayments' : 'Your mortgage' }), el('p', { text: `${fmt.gbp(principal)} over ${termYears} years at ${opts.annualRate}%${opts.fixedMonths ? ` for ${opts.fixedMonths / 12} years, then ${opts.revertRate ?? opts.annualRate}%` : ''} · ${io ? 'interest only' : 'repayment'}` })])]));
   const paymentSub = r.paymentChanges.length > 1 ? `then ${fmt.gbp(r.paymentChanges[1].amount, 2)} from month ${r.paymentChanges[1].fromMonth}` : 'a month';
   card.append(el('div', { class: 'hero' }, [
@@ -205,7 +206,7 @@ function heroCard(c, opts, principal, price, termYears) {
 function comparisonCard(c, opts) {
   const b = c.base, w = c.withOverpayments;
   const io = opts.type === 'interest_only';
-  const card = el('div', { class: 'card' });
+  const card = el('section', { class: 'card' });
   card.append(el('div', { class: 'card-header' }, [el('div', {}, [el('h2', { text: 'What overpaying saves you' }), el('p', { text: 'Compared with paying only the standard amount.' })])]));
   const headline = io
     ? `You'd owe <b class="num">${fmt.gbp(c.balanceReduced)}</b> less at the end of the term and pay <b class="num">${fmt.gbp(c.interestSaved)}</b> less interest.`
@@ -229,7 +230,7 @@ function comparisonCard(c, opts) {
 
 // ------------------------------------------------------------------ chart
 function chartCard(c, opts) {
-  const card = el('div', { class: 'card' });
+  const card = el('section', { class: 'card' });
   card.append(el('div', { class: 'card-header' }, [el('div', {}, [el('h2', { text: 'Balance over time' }), el('p', { text: 'How much you still owe at the end of each year.' })])]));
   const series = [{ name: 'Standard payments', color: COLOR_BASE, data: yearlyBalances(c.base, opts.principal) }];
   if (c.hasOverpayments) series.push({ name: 'With overpayments', color: COLOR_OVER, data: yearlyBalances(c.withOverpayments, opts.principal) });
@@ -336,7 +337,7 @@ function compactGbp(v) {
 
 // ------------------------------------------------------------------ overpay vs save
 function saveCard(c, opts, extras) {
-  const card = el('div', { class: 'card' });
+  const card = el('section', { class: 'card' });
   card.append(el('div', { class: 'card-header' }, [el('div', {}, [el('h2', { text: 'Overpay or save?' }), el('p', { text: 'Is your spare cash better off reducing the mortgage or earning interest?' })])]));
   if (!c.hasOverpayments) {
     card.append(el('p', { class: 'muted small', text: 'Add an overpayment in the form to compare putting that money into savings instead.' }));
@@ -382,7 +383,7 @@ function saveExplain() {
 
 // ------------------------------------------------------------------ buy-to-let
 function btlCard(run, opts, extras, price) {
-  const card = el('div', { class: 'card' });
+  const card = el('section', { class: 'card' });
   card.append(el('div', { class: 'card-header' }, [el('div', {}, [el('h2', { text: 'Buy-to-let: rent, tax and yield' }), el('p', { text: `First-year figures using the mortgage above with standard payments${state.ratesLabel ? `, ${state.ratesLabel} tax rules` : ''}.` })])]));
   if (!state.rates) { card.append(el('p', { class: 'note-box warn', text: 'Tax rates could not be loaded, so the tax on rent cannot be shown.' })); return card; }
   const y1 = run.yearly[0] || { interest: 0, paid: 0 };
@@ -421,7 +422,7 @@ function btlCard(run, opts, extras, price) {
 // ------------------------------------------------------------------ rate sensitivity
 function sensitivityCard(opts) {
   const rows = rateSensitivity(opts).filter((r) => r.payment != null);
-  const card = el('div', { class: 'card' });
+  const card = el('section', { class: 'card' });
   card.append(el('div', { class: 'card-header' }, [el('div', {}, [el('h2', { text: 'What if the rate changes?' }), el('p', { text: opts.type === 'interest_only' ? 'Monthly interest at different rates.' : 'Monthly payment at different rates, without overpayments.' })])]));
   const max = Math.max(...rows.map((r) => r.payment));
   const bars = el('div', { class: 'bars' });
@@ -441,7 +442,7 @@ function sensitivityCard(opts) {
 // ------------------------------------------------------------------ LTV
 function ltvCard(price, principal) {
   const bands = ltvBands(price, principal);
-  const card = el('div', { class: 'card' });
+  const card = el('section', { class: 'card' });
   const ltv = principal / price;
   card.append(el('div', { class: 'card-header' }, [el('div', {}, [el('h2', { text: 'Deposit and loan-to-value' }), el('p', { text: `You are borrowing ${fmt.pct(ltv, 1)} of the property value. Lenders price in tiers - a bigger deposit can unlock a cheaper rate.` })])]));
   const rows = bands.map((b) => [
@@ -464,7 +465,8 @@ function scheduleCard(run, c) {
   const body = el('div', { class: 'body' });
   const table = el('table', { class: 'lines' });
   const narrow = (results.clientWidth || 640) < 420; // five money columns do not fit on a phone; "Paid" = interest + loan repaid
-  table.append(el('thead', {}, el('tr', {}, ['Year', ...(narrow ? [] : ['Paid']), 'Interest', 'Loan repaid', 'Balance'].map((h, i) => el('th', { text: h, style: i ? 'text-align:right' : '' })))));
+  table.append(el('caption', { class: 'visually-hidden', text: 'Mortgage balance and payments by year' }));
+  table.append(el('thead', {}, el('tr', {}, ['Year', ...(narrow ? [] : ['Paid']), 'Interest', 'Loan repaid', 'Balance'].map((h, i) => el('th', { text: h, scope: 'col', style: i ? 'text-align:right' : '' })))));
   const tbody = el('tbody');
   for (const y of run.yearly) {
     tbody.append(el('tr', {}, [
@@ -486,7 +488,7 @@ function scheduleCard(run, c) {
 }
 
 function assumptionsCard(opts) {
-  const card = el('div', { class: 'card' });
+  const card = el('section', { class: 'card' });
   card.append(el('div', { class: 'card-header' }, [el('div', {}, [el('h2', { text: 'How this is worked out' })])]));
   card.append(el('ul', { class: 'small', style: 'margin:0; padding-left:18px; color:var(--text-2)' }, [
     el('li', { html: 'Interest is added monthly at one twelfth of the annual rate on the balance at the start of the month, and payments are made at the end of each month. This is the standard formula lenders quote; real lenders charge daily so figures may differ by a few pounds.' }),

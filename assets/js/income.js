@@ -1,5 +1,5 @@
 import { calculate, marginalRate, applyOverrides } from './tax-engine.js?v=fdea76ad1f';
-import { fmt, parseNum, initMoneyInputs, initNumberInputs, $, $$, el, linesTable, urlState, debounce, loadJSON } from './ui.js?v=1c3761c698';
+import { fmt, parseNum, initMoneyInputs, initNumberInputs, captionTables, $, $$, el, linesTable, urlState, debounce, loadJSON } from './ui.js?v=86e473baa6';
 
 const state = { index: null, rates: {}, period: 'year', overrides: {}, editorKey: '' };
 const form = $('#form');
@@ -183,6 +183,7 @@ function render() {
   if (r.giving) results.append(givingCard(r, rates));
   if (r.hicbc) results.append(hicbcCard(r, rates));
   results.append(sourcesCard(base));
+  captionTables(results);
   for (const sm of $$('details > summary', results)) if (openSummaries.has(sm.textContent)) sm.parentElement.open = true;
   if (state.refocusPeriod) { $(`#period-${state.period}`, results)?.focus({ preventScroll: true }); state.refocusPeriod = false; }
   else if (focused) $(`#${focused}`, results)?.focus({ preventScroll: true });
@@ -213,7 +214,7 @@ function explain(title, bodyNodes) {
 
 function heroCard(r, rates) {
   const t = r.totals;
-  const card = el('div', { class: 'card', 'aria-live': 'polite' });
+  const card = el('section', { class: 'card', 'aria-live': 'polite' });
   card.append(el('div', { class: 'card-header' }, [
     el('div', {}, [el('h2', { text: 'Your take-home pay' }), el('p', {}, [`Tax year ${rates.label}${r.region === 'scotland' ? ' · Scottish rates' : ''} `, Object.keys(state.overrides).length ? el('span', { class: 'badge', text: `Custom rates (${Object.keys(state.overrides).length} changed)` }) : null])]),
     periodSwitch(),
@@ -256,7 +257,7 @@ function tile(k, v, s, primary) {
 
 function summaryCard(r, m, rates) {
   const t = r.totals;
-  const card = el('div', { class: 'card' });
+  const card = el('section', { class: 'card' });
   card.append(el('div', { class: 'card-header' }, [el('div', {}, [el('h2', { text: 'Summary' }), el('p', { text: `Figures shown ${per()}.` })])]));
   const rows = [
     ['Gross income', money(t.grossIncome), { note: r.income.employment.taxableBenefits > 0 ? 'Includes taxable benefits, which are taxed but not paid as cash.' : null }],
@@ -290,7 +291,7 @@ function stat(k, v, s) {
 
 function collectionCard(r, rates) {
   const c = r.collection, p = c.paye, sa = c.selfAssessment;
-  const card = el('div', { class: 'card' });
+  const card = el('section', { class: 'card' });
   card.append(el('div', { class: 'card-header' }, [el('div', {}, [el('h2', { text: 'How your tax is collected' }), el('p', { text: 'What comes out through payroll and what you settle on a tax return.' })])]));
   const rows = [
     ['Income tax', money(sa.incomeTax), { mid: money(p.incomeTax), note: sa.incomeTax < -0.5 ? 'Negative: PAYE has taken more than you owe, so Self Assessment gives a refund.' : null }],
@@ -316,7 +317,7 @@ function collectionCard(r, rates) {
 
 function incomeCard(r, rates) {
   const e = r.income.employment, s = r.income.selfEmployment, i = r.income;
-  const card = el('div', { class: 'card' });
+  const card = el('section', { class: 'card' });
   card.append(el('div', { class: 'card-header' }, [el('div', {}, [el('h2', { text: 'Step 1 · Your income' }), el('p', { text: 'What counts as income for tax.' })])]));
   const rows = [];
   const group = (t) => rows.push([el('b', { text: t }), '']);
@@ -391,7 +392,7 @@ function incomeCard(r, rates) {
 
 function allowancesCard(r, rates) {
   const a = r.allowances;
-  const card = el('div', { class: 'card' });
+  const card = el('section', { class: 'card' });
   card.append(el('div', { class: 'card-header' }, [el('div', {}, [el('h2', { text: 'Step 2 · Tax-free allowances' }), el('p', { text: 'The part of your income that is not taxed.' })])]));
   const rows = [
     ['Standard Personal Allowance', money(a.personalAllowanceStandard)],
@@ -422,7 +423,7 @@ function allowancesCard(r, rates) {
 
 function incomeTaxCard(r, rates) {
   const it = r.incomeTax;
-  const card = el('div', { class: 'card' });
+  const card = el('section', { class: 'card' });
   card.append(el('div', { class: 'card-header' }, [el('div', {}, [el('h2', { text: 'Step 3 · Income tax' }), el('p', { text: r.region === 'scotland' ? 'Scottish rates on earnings; UK rates on savings and dividends.' : 'Taxable income is filled into the bands from the bottom up.' })])]));
   const rows = [];
   const pieceRows = (pieces, group) => pieces.map((p) => [
@@ -451,7 +452,7 @@ function incomeTaxCard(r, rates) {
 function niCard(r, rates) {
   const ni = r.nationalInsurance;
   const c1 = ni.class1, c4 = ni.class4, c2 = ni.class2;
-  const card = el('div', { class: 'card' });
+  const card = el('section', { class: 'card' });
   card.append(el('div', { class: 'card-header' }, [el('div', {}, [el('h2', { text: 'Step 4 · National Insurance' }), el('p', { text: 'Charged on earnings and profits, not on savings or dividends.' })])]));
   const rows = [];
   if (r.income.employment.grossPay > 0) {
@@ -478,7 +479,7 @@ function niCard(r, rates) {
 
 function studentLoanCard(r, rates) {
   const s = r.studentLoans;
-  const card = el('div', { class: 'card' });
+  const card = el('section', { class: 'card' });
   card.append(el('div', { class: 'card-header' }, [el('div', {}, [el('h2', { text: 'Step 5 · Student loan' }), el('p', { text: 'Repayments are a percentage of income above the plan threshold.' })])]));
   const rows = [['Income counted for repayments', money(s.income), { note: s.unearnedIncluded > 0 ? 'Includes savings, dividends and other income because they exceed £2,000.' : null }]];
   if (s.undergraduate) {
@@ -494,7 +495,7 @@ function studentLoanCard(r, rates) {
 
 function givingCard(r, rates) {
   const g = r.giving;
-  const card = el('div', { class: 'card' });
+  const card = el('section', { class: 'card' });
   card.append(el('div', { class: 'card-header' }, [el('div', {}, [el('h2', { text: 'Charitable giving' }), el('p', { text: 'What your donations cost you after tax relief.' })])]));
   const rows = [];
   if (g.giftAidPaid > 0) {
@@ -530,7 +531,7 @@ function givingCard(r, rates) {
 
 function hicbcCard(r, rates) {
   const h = r.hicbc;
-  const card = el('div', { class: 'card' });
+  const card = el('section', { class: 'card' });
   card.append(el('div', { class: 'card-header' }, [el('div', {}, [el('h2', { text: 'High Income Child Benefit Charge' }), el('p', { text: `Applies when adjusted net income is over ${fmt.gbp(h.threshold)}.` })])]));
   card.append(linesTable([
     [`Child Benefit for ${h.children} ${h.children === 1 ? 'child' : 'children'}`, money(h.childBenefitAnnual), { note: h.optedOut ? 'You have opted out of payments, so nothing is received and no charge applies.' : 'Not taxable income, but clawed back through the charge below if your income is high.' }],
@@ -543,7 +544,7 @@ function hicbcCard(r, rates) {
 }
 
 function sourcesCard(rates) {
-  const card = el('div', { class: 'card' });
+  const card = el('section', { class: 'card' });
   const n = Object.keys(state.overrides).length;
   if (n) card.append(el('div', { class: 'note-box warn', style: 'margin-bottom:14px' }, [el('p', { html: `<b>${n} figure${n === 1 ? '' : 's'} changed from the official values.</b> The results above use your custom rates, not the GOV.UK ones listed below.` }), el('p', {}, el('button', { type: 'button', class: 'btn', style: 'margin-top:8px', text: 'Reset to official figures', onclick: () => { state.overrides = {}; buildRatesEditor(true); render(); } }))]));
   card.append(el('div', { class: 'card-header' }, [el('div', {}, [el('h2', { text: 'Assumptions and sources' }), el('p', { text: `Rates for ${rates.label} verified against GOV.UK on ${new Date(rates.verified).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}.` })])]));

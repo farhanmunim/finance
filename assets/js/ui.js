@@ -77,9 +77,10 @@ export function el(tag, attrs = {}, children = []) {
 }
 
 /** Simple table of [label, value, opts] rows. */
-export function linesTable(rows, { header } = {}) {
+export function linesTable(rows, { header, caption } = {}) {
   const table = el('table', { class: 'lines' });
-  if (header) table.append(el('thead', {}, el('tr', {}, header.map((h) => el('th', { text: h })))));
+  if (caption) table.append(el('caption', { class: 'visually-hidden', text: caption }));
+  if (header) table.append(el('thead', {}, el('tr', {}, header.map((h) => el('th', { text: h, scope: 'col' })))));
   const tbody = el('tbody');
   for (const r of rows) {
     if (!r) continue;
@@ -116,6 +117,14 @@ export const urlState = {
     history.replaceState(null, '', qs ? `?${qs}` : location.pathname);
   },
 };
+
+/** Give every table inside a results section a screen-reader caption from the section heading. */
+export function captionTables(root) {
+  for (const t of root.querySelectorAll('section table:not(:has(caption))')) {
+    const h = t.closest('section')?.querySelector('h2, h3');
+    if (h) t.prepend(el('caption', { class: 'visually-hidden', text: h.textContent }));
+  }
+}
 
 export function debounce(fn, ms = 120) {
   let t;
