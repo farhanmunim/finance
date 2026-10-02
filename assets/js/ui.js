@@ -80,7 +80,7 @@ export function el(tag, attrs = {}, children = []) {
 export function linesTable(rows, { header, caption } = {}) {
   const table = el('table', { class: 'lines' });
   if (caption) table.append(el('caption', { class: 'visually-hidden', text: caption }));
-  if (header) table.append(el('thead', {}, el('tr', {}, header.map((h) => el('th', { text: h, scope: 'col' })))));
+  if (header) table.append(el('thead', {}, el('tr', {}, header.map((h) => el('th', { scope: 'col' }, h || el('span', { class: 'visually-hidden', text: 'Item' }))))));
   const tbody = el('tbody');
   for (const r of rows) {
     if (!r) continue;
@@ -124,6 +124,40 @@ export function captionTables(root) {
     const h = t.closest('section')?.querySelector('h2, h3');
     if (h) t.prepend(el('caption', { class: 'visually-hidden', text: h.textContent }));
   }
+}
+
+/** Link a new-tab anchor and tell assistive tech that it opens a new tab. */
+export function externalLink(href, text) {
+  return el('a', { href, target: '_blank', rel: 'noopener' }, [text, el('span', { class: 'visually-hidden', text: ' (opens in a new tab)' })]);
+}
+
+/**
+ * Results are rebuilt on every keystroke, and a live region created at the same moment as its
+ * content is not announced. A single long-lived #sr-status region is updated instead, after the
+ * user pauses, and only when the message actually changed.
+ */
+let announceTimer, lastAnnounced = '';
+export function announce(text, ms = 900) {
+  clearTimeout(announceTimer);
+  announceTimer = setTimeout(() => {
+    const region = document.getElementById('sr-status');
+    if (!region || text === lastAnnounced) return;
+    lastAnnounced = text;
+    region.textContent = text;
+  }, ms);
+}
+
+/** Tie each field's hint text to its control so screen readers read it with the label. */
+export function linkHints(root = document) {
+  root.querySelectorAll('.field').forEach((field) => {
+    const hints = Array.from(field.children).filter((c) => c.classList.contains('hint'));
+    if (!hints.length) return;
+    const control = field.matches('fieldset') ? field : field.querySelector(':scope > .input-wrap input, :scope > .input-wrap select, :scope > select, :scope > input');
+    if (!control) return;
+    const ids = hints.map((h, i) => h.id || (h.id = `${control.id || control.name || 'field'}-hint${i ? `-${i}` : ''}`));
+    const existing = (control.getAttribute('aria-describedby') || '').split(/\s+/).filter(Boolean);
+    control.setAttribute('aria-describedby', [...new Set([...existing, ...ids])].join(' '));
+  });
 }
 
 export function debounce(fn, ms = 120) {

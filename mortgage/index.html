@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Mortgage Calculator - repayments, overpayments and buy-to-let</title>
+  <title>UK Mortgage Calculator - repayments and overpayments</title>
   <meta name="description" content="Work out your monthly mortgage payment, total interest and how much overpaying would save. Repayment and interest-only, with fixed-rate periods.">
     <link rel="canonical" href="https://finance.farhan.app/mortgage/">
   <meta name="robots" content="index, follow">
@@ -12,20 +12,23 @@
   <meta name="theme-color" content="#18181b">
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="UK Finance Tools">
-  <meta property="og:title" content="Mortgage Calculator - repayments, overpayments and buy-to-let">
+  <meta property="og:title" content="UK Mortgage Calculator - repayments and overpayments">
   <meta property="og:description" content="Free UK mortgage calculator: monthly repayments, total interest, fixed-rate deals, overpayments, overpay-versus-save, rate changes and buy-to-let tax.">
   <meta property="og:url" content="https://finance.farhan.app/mortgage/">
   <meta property="og:image" content="https://finance.farhan.app/assets/og.png">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="UK Finance Tools: income tax and mortgage calculators">
   <meta property="og:locale" content="en_GB">
   <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="Mortgage Calculator - repayments, overpayments and buy-to-let">
+  <meta name="twitter:title" content="UK Mortgage Calculator - repayments and overpayments">
   <meta name="twitter:description" content="Free UK mortgage calculator: monthly repayments, total interest, fixed-rate deals, overpayments, overpay-versus-save, rate changes and buy-to-let tax.">
   <meta name="twitter:image" content="https://finance.farhan.app/assets/og.png">
+  <meta name="twitter:image:alt" content="UK Finance Tools: income tax and mortgage calculators">
   <script type="application/ld+json">{"@context": "https://schema.org", "@type": "WebApplication", "name": "UK Mortgage Calculator", "url": "https://finance.farhan.app/mortgage/", "applicationCategory": "FinanceApplication", "operatingSystem": "Any", "browserRequirements": "Requires JavaScript", "offers": {"@type": "Offer", "price": "0", "priceCurrency": "GBP"}, "description": "Work out mortgage repayments, total interest, and what overpaying saves, including buy-to-let tax.", "author": {"@type": "Person", "name": "Farhan", "url": "https://farhan.app"}}</script>
+  <script type="application/ld+json">{"@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [{"@type": "ListItem", "position": 1, "name": "UK Finance Tools", "item": "https://finance.farhan.app/"}, {"@type": "ListItem", "position": 2, "name": "Mortgage calculator", "item": "https://finance.farhan.app/mortgage/"}]}</script>
   <link rel="preload" href="/assets/fonts/geist-variable.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="/assets/css/style.css?v=2bcd253f40">
+  <link rel="stylesheet" href="/assets/css/style.css?v=3371e6eea9">
   <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
   <script defer src="https://mochi.farhan.app/script.js" data-website-id="f43f5c82-286b-40d3-9101-30af20fb7742" data-exclude-search="true"></script>
 </head>
@@ -34,7 +37,7 @@
   <noscript><p class="noscript-note">These calculators run in your browser and need JavaScript turned on.</p></noscript>
   <header class="site-header">
     <div class="inner">
-      <a class="brand" href="/" aria-label="UK Finance Tools home" title="Home"><span class="logo">£</span><span class="brand-text">UK Finance Tools</span></a>
+      <a class="brand" href="/" aria-label="UK Finance Tools home"><span class="logo">£</span><span class="brand-text">UK Finance Tools</span></a>
       <nav class="site-nav" aria-label="Tools">
         <a href="/income/">Income tax</a>
         <a href="/mortgage/" aria-current="page">Mortgage</a>
@@ -43,10 +46,11 @@
   </header>
 
   <main class="container" id="main">
+    <div id="sr-status" class="visually-hidden" role="status" aria-live="polite" aria-atomic="true"></div>
     <h1 class="page-title">Mortgage calculator</h1>
     <p class="page-intro">See what your mortgage will cost each month and in total, then test what overpaying would save you in interest and time.</p>
     <div class="privacy-note" role="note">
-      <span class="privacy-icon" aria-hidden="true"><svg aria-hidden="true" focusable="false" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span>
+      <span class="privacy-icon"><svg aria-hidden="true" focusable="false" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span>
       <p><b>Private by design.</b> Everything you type stays on your device: the maths runs in your browser and nothing you enter is saved or sent to a server.</p>
     </div>
 
@@ -83,14 +87,14 @@
                 <div class="input-wrap"><input id="rate" name="r" type="number" min="0" max="30" step="0.01" placeholder="e.g. 4.5"><span class="affix suffix">% a year</span></div>
               </div>
             </div>
-            <div class="field">
-              <span class="label">Mortgage type</span>
-              <div class="segmented block" role="radiogroup" aria-label="Mortgage type">
+            <fieldset class="field">
+              <legend class="label">Mortgage type</legend>
+              <div class="segmented block">
                 <input type="radio" name="type" id="type-rep" value="repayment" checked><label for="type-rep">Repayment</label>
                 <input type="radio" name="type" id="type-io" value="interest_only"><label for="type-io">Interest only</label>
               </div>
               <span class="hint" id="type-hint">Each payment covers interest and part of the loan, so it's fully repaid at the end of the term.</span>
-            </div>
+            </fieldset>
             <details class="explain options" id="rate-period">
               <summary>Initial rate period (fixed or tracker deal)</summary>
               <div class="body stack">
@@ -109,7 +113,7 @@
             </details>
             <label class="toggle" id="own-payment-toggle">
               <span><span class="label">I know my monthly payment</span><span class="sub">Enter it and we'll work out how long the loan takes to clear</span></span>
-              <input type="checkbox" id="ownPayment" name="op" value="1"><span class="switch"></span>
+              <input type="checkbox" id="ownPayment" name="op" value="1" role="switch"><span class="switch"></span>
             </label>
             <div class="field" id="payment-field" hidden>
               <label for="payment">Monthly payment</label>
@@ -142,14 +146,14 @@
                 <div class="input-wrap"><input id="lumpYear" name="ly" type="number" min="1" max="40" step="1" value="1"></div>
               </div>
             </div>
-            <div class="field" id="effect-field">
-              <span class="label">When I overpay, I want to</span>
-              <div class="segmented block" role="radiogroup" aria-label="Effect of overpaying">
+            <fieldset class="field" id="effect-field">
+              <legend class="label">When I overpay, I want to</legend>
+              <div class="segmented block">
                 <input type="radio" name="eff" id="eff-term" value="reduce_term" checked><label for="eff-term">Pay it off sooner</label>
                 <input type="radio" name="eff" id="eff-pay" value="reduce_payment"><label for="eff-pay">Lower my payment</label>
               </div>
               <span class="hint">Paying it off sooner saves the most interest. Ask your lender which they do by default.</span>
-            </div>
+            </fieldset>
           </div>
         </div>
         <details class="section" id="sec-save">
@@ -195,13 +199,13 @@
               <div class="input-wrap"><span class="affix">£</span><input id="otherIncome" name="oi" data-money placeholder="e.g. 45,000"></div>
               <span class="hint">Salary, pension or profits before tax. The rent is taxed on top of this, using your Personal Allowance and tax bands automatically.</span>
             </div>
-            <div class="field">
-              <span class="label">Where you live</span>
-              <div class="segmented block" role="radiogroup" aria-label="Region">
+            <fieldset class="field">
+              <legend class="label">Where you live</legend>
+              <div class="segmented block">
                 <input type="radio" name="reg" id="reg-ruk" value="ruk" checked><label for="reg-ruk">England, Wales or NI</label>
                 <input type="radio" name="reg" id="reg-scot" value="scotland"><label for="reg-scot">Scotland</label>
               </div>
-            </div>
+            </fieldset>
           </div>
         </details>
 
@@ -212,6 +216,23 @@
         <div class="card"><p class="muted">Enter your property value, deposit and interest rate to see your payments.</p></div>
       </section>
     </form>
+
+    <section class="card about" aria-labelledby="about-heading">
+      <h2 id="about-heading">About this mortgage calculator</h2>
+      <p>This free calculator works out your monthly mortgage payment, the total interest you will pay and how much overpaying could save you. It handles repayment and interest-only mortgages, an initial fixed or tracker rate period followed by a different rate, and monthly, yearly or one-off overpayments.</p>
+      <h3>What it shows</h3>
+      <ul>
+        <li>Your monthly payment, total interest, total repaid and payoff date</li>
+        <li>What overpaying saves, either by paying the mortgage off sooner or by lowering your payment</li>
+        <li>Whether overpaying or saving the money works out better, with the break-even savings rate</li>
+        <li>How your payment changes if the interest rate rises or falls</li>
+        <li>Loan-to-value tiers and how much extra deposit moves you into the next one</li>
+        <li>Buy-to-let rent, tax after the mortgage interest restriction, and gross yield</li>
+        <li>A year-by-year breakdown of interest, loan repaid and balance</li>
+      </ul>
+      <h3>How it is calculated</h3>
+      <p>Interest is added monthly at one twelfth of the annual rate and payments are made at the end of each month, which is the standard formula lenders quote. Real lenders often charge interest daily, so figures can differ slightly from your own. Arrangement fees and early repayment charges are not included. It is for guidance only and is not financial advice. Want to see your take-home pay? Try the <a href="/income/">income tax calculator</a>.</p>
+    </section>
   </main>
 
   <div class="mobile-summary" id="mobile-summary" hidden>
@@ -228,10 +249,10 @@
         <span class="footer-sep" aria-hidden="true"></span>
         <a href="/mortgage/">Mortgage</a>
         <span class="footer-spacer"></span>
-        <span class="footer-built">Built by <a href="https://farhan.app" target="_blank" rel="noopener">Farhan</a></span>
+        <span class="footer-built">Built by <a href="https://farhan.app" target="_blank" rel="noopener">Farhan<span class="visually-hidden"> (opens in a new tab)</span></a></span>
       </nav>
     </div>
   </footer>
-  <script type="module" src="/assets/js/mortgage.js?v=0436d465b4"></script>
+  <script type="module" src="/assets/js/mortgage.js?v=530a343154"></script>
 </body>
 </html>

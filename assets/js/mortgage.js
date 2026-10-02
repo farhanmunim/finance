@@ -1,6 +1,6 @@
 import { amortise, compare, overpayVsSave, breakEvenSavingsRate, rateSensitivity, ltvBands } from './mortgage-engine.js?v=61f5bba74e';
 import { propertyIncrementalTax } from './tax-engine.js?v=fdea76ad1f';
-import { fmt, parseNum, initMoneyInputs, initNumberInputs, captionTables, $, $$, el, linesTable, urlState, debounce, loadJSON } from './ui.js?v=e6ed78c2b0';
+import { fmt, parseNum, initMoneyInputs, initNumberInputs, captionTables, $, $$, el, linesTable, urlState, debounce, loadJSON, announce, linkHints } from './ui.js?v=6705e2c488';
 
 const form = $('#form');
 const results = $('#results');
@@ -13,6 +13,7 @@ async function init() {
   loadRates().then(() => render());
   initMoneyInputs(form);
   initNumberInputs(form);
+  linkHints(form);
   const rerender = debounce(() => { syncVisibility(); render(); }, 80);
   form.addEventListener('input', rerender);
   form.addEventListener('change', (e) => { if (e.target.matches('input:not([type=radio]):not([type=checkbox])')) return; syncVisibility(); render(); });
@@ -164,6 +165,7 @@ function render() {
   $('#ms-pay').textContent = fmt.gbp(main.initialPayment, 2);
   $('#ms-int').textContent = fmt.gbp(main.totalInterest);
   $('#mobile-summary').hidden = false;
+  announce(`Monthly payment ${fmt.gbp(main.initialPayment, 2)}. Total interest ${fmt.gbp(main.totalInterest)} over ${fmt.months(main.months)}.`);
 }
 
 function tile(k, v, s, variant) {
@@ -182,7 +184,7 @@ function payoffDate(months) {
 function heroCard(c, opts, principal, price, termYears) {
   const r = c.hasOverpayments ? c.withOverpayments : c.base;
   const io = opts.type === 'interest_only';
-  const card = el('section', { class: 'card', 'aria-live': 'polite' });
+  const card = el('section', { class: 'card' });
   card.append(el('div', { class: 'card-header' }, [el('div', {}, [el('h2', { text: c.hasOverpayments ? 'Your mortgage with overpayments' : 'Your mortgage' }), el('p', { text: `${fmt.gbp(principal)} over ${termYears} years at ${opts.annualRate}%${opts.fixedMonths ? ` for ${opts.fixedMonths / 12} years, then ${opts.revertRate ?? opts.annualRate}%` : ''} · ${io ? 'interest only' : 'repayment'}` })])]));
   const paymentSub = r.paymentChanges.length > 1 ? `then ${fmt.gbp(r.paymentChanges[1].amount, 2)} from month ${r.paymentChanges[1].fromMonth}` : 'a month';
   card.append(el('div', { class: 'hero' }, [
@@ -244,7 +246,7 @@ function yearlyBalances(run, principal) {
   return pts;
 }
 
-function lineChart(series, { xLabel = (x) => (x === 0 ? 'Now' : `Yr ${x}`), tipLabel = (x) => (x === 0 ? 'Now' : `End of year ${x}`) } = {}) {
+function lineChart(series, { title = 'Line chart of outstanding mortgage balance by year', note = ' The same balances are in the year-by-year table.', xLabel = (x) => (x === 0 ? 'Now' : `Yr ${x}`), tipLabel = (x) => (x === 0 ? 'Now' : `End of year ${x}`) } = {}) {
   const W = Math.max(320, Math.min(760, (results.clientWidth || 640) - 42));
   const H = Math.round(W < 480 ? W * 0.62 : W * 0.47);
   const m = { top: 16, right: 20, bottom: 36, left: 56 };
@@ -263,7 +265,9 @@ function lineChart(series, { xLabel = (x) => (x === 0 ? 'Now' : `Yr ${x}`), tipL
   const svg = document.createElementNS(ns, 'svg');
   svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
   svg.setAttribute('role', 'img');
-  svg.setAttribute('aria-label', 'Line chart of outstanding mortgage balance by year');
+  svg.setAttribute('tabindex', '0');
+  const describe = (s) => { const a = s.data[0], z = s.data[s.data.length - 1]; return `${s.name}: ${fmt.gbp(a.y)} ${tipLabel(a.x).toLowerCase()} to ${fmt.gbp(z.y)} at ${tipLabel(z.x).toLowerCase()}`; };
+  svg.setAttribute('aria-label', `${title}. ${series.map(describe).join('. ')}. Use the left and right arrow keys to read each year.${note}`);
   const add = (tag, attrs, parent = svg) => { const n = document.createElementNS(ns, tag); for (const [k, v] of Object.entries(attrs)) n.setAttribute(k, v); parent.append(n); return n; };
 
   // grid + y labels
@@ -289,13 +293,13 @@ function lineChart(series, { xLabel = (x) => (x === 0 ? 'Now' : `Yr ${x}`), tipL
   const cross = add('line', { x1: 0, x2: 0, y1: m.top, y2: m.top + ih, stroke: '#9ca3af', 'stroke-width': 1, 'stroke-dasharray': '3 3', opacity: 0 });
   const dots = series.map((s) => add('circle', { r: 4.5, fill: s.color, stroke: '#fff', 'stroke-width': 2, opacity: 0 }));
   const wrap = el('div', { class: 'chart-wrap' });
-  const tip = el('div', { class: 'chart-tip' });
-  wrap.append(svg, tip);
-  const onMove = (ev) => {
+  const tip = el('div', { class: 'chart-tip', 'aria-hidden': 'true' });
+  const readout = el('div', { class: 'visually-hidden', role: 'status', 'aria-live': 'polite' });
+  wrap.append(svg, tip, readout);
+  let cursor = 0;
+  const showAt = (x, spoken) => {
     const rect = svg.getBoundingClientRect();
-    const px = ((ev.clientX - rect.left) / rect.width) * W;
-    const x = Math.round(((px - m.left) / iw) * xMax);
-    if (x < 0 || x > xMax) return onLeave();
+    cursor = x;
     cross.setAttribute('x1', sx(x)); cross.setAttribute('x2', sx(x)); cross.setAttribute('opacity', 1);
     const lines = [`<div>${tipLabel(x)}</div>`];
     series.forEach((s, i) => {
@@ -310,12 +314,28 @@ function lineChart(series, { xLabel = (x) => (x === 0 ? 'Now' : `Yr ${x}`), tipL
     tip.classList.toggle('left', px2 < rect.width * 0.25);
     tip.classList.toggle('right', px2 > rect.width * 0.75);
     tip.classList.add('show');
+    if (spoken) readout.textContent = `${tipLabel(x)}. ${series.map((s) => { const p = s.data.find((q) => q.x === x); return p ? `${s.name} ${fmt.gbp(p.y)}` : null; }).filter(Boolean).join('. ')}`;
+  };
+  const onMove = (ev) => {
+    const rect = svg.getBoundingClientRect();
+    const px = ((ev.clientX - rect.left) / rect.width) * W;
+    const x = Math.round(((px - m.left) / iw) * xMax);
+    if (x < 0 || x > xMax) return onLeave();
+    showAt(x, false);
   };
   const onLeave = () => { cross.setAttribute('opacity', 0); dots.forEach((d) => d.setAttribute('opacity', 0)); tip.classList.remove('show'); };
   svg.addEventListener('mousemove', onMove);
   svg.addEventListener('touchmove', (e) => { onMove(e.touches[0]); }, { passive: true });
   svg.addEventListener('mouseleave', onLeave);
   svg.addEventListener('touchend', onLeave);
+  svg.addEventListener('keydown', (e) => {
+    const next = { ArrowRight: cursor + 1, ArrowUp: cursor + 1, ArrowLeft: cursor - 1, ArrowDown: cursor - 1, Home: 0, End: xMax }[e.key];
+    if (next == null) return;
+    e.preventDefault();
+    showAt(Math.max(0, Math.min(xMax, next)), true);
+  });
+  svg.addEventListener('focus', () => showAt(cursor, false));
+  svg.addEventListener('blur', onLeave);
 
   const legend = el('div', { class: 'legend' }, series.map((s) => el('span', { style: `--c:${s.color}`, text: s.name })));
   return el('div', {}, [wrap, legend]);
@@ -369,7 +389,7 @@ function saveCard(c, opts, extras) {
   card.append(el('div', { style: 'margin-top:14px' }, [el('h3', { text: 'Net position over time', style: 'margin-bottom:6px' }), lineChart([
     { name: 'Overpay the mortgage', color: COLOR_OVER, data: [{ x: 0, y: -opts.principal }, ...v.yearly.map((y) => ({ x: y.year, y: y.netA }))] },
     { name: 'Save instead', color: COLOR_BASE, data: [{ x: 0, y: -opts.principal }, ...v.yearly.map((y) => ({ x: y.year, y: y.netB }))] },
-  ])]));
+  ], { title: 'Line chart of net position (savings minus mortgage owed) by year', note: '' })]));
   card.append(saveExplain());
   return card;
 }
@@ -425,11 +445,11 @@ function sensitivityCard(opts) {
   const card = el('section', { class: 'card' });
   card.append(el('div', { class: 'card-header' }, [el('div', {}, [el('h2', { text: 'What if the rate changes?' }), el('p', { text: opts.type === 'interest_only' ? 'Monthly interest at different rates.' : 'Monthly payment at different rates, without overpayments.' })])]));
   const max = Math.max(...rows.map((r) => r.payment));
-  const bars = el('div', { class: 'bars' });
+  const bars = el('ul', { class: 'bars' });
   for (const r of rows) {
-    bars.append(el('div', { class: `bar-row${r.current ? ' current' : ''}` }, [
+    bars.append(el('li', { class: `bar-row${r.current ? ' current' : ''}` }, [
       el('span', { text: `${r.rate.toFixed(2)}%${r.current ? ' (now)' : ''}` }),
-      el('span', { class: 'track' }, el('span', { class: 'fill', style: `width:${(r.payment / max) * 100}%` })),
+      el('span', { class: 'track', 'aria-hidden': 'true' }, el('span', { class: 'fill', style: `width:${(r.payment / max) * 100}%` })),
       el('span', { class: 'val', text: fmt.gbp(r.payment, 2) }),
     ]));
   }

@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Income Tax Calculator - UK take-home pay, self-employed and landlord tax</title>
-  <meta name="description" content="Free UK income tax calculator: take-home pay, self-employment, property income, dividends, pensions, student loans and National Insurance, with every step of the calculation shown.">
+  <title>UK Income Tax Calculator - take-home pay, NI, student loan</title>
+  <meta name="description" content="Free UK income tax calculator for the current and previous tax year: take-home pay, National Insurance, student loans, pensions, self-employment and rental income.">
     <link rel="canonical" href="https://finance.farhan.app/income/">
   <meta name="robots" content="index, follow">
   <meta name="author" content="Farhan">
@@ -12,20 +12,23 @@
   <meta name="theme-color" content="#18181b">
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="UK Finance Tools">
-  <meta property="og:title" content="Income Tax Calculator - UK take-home pay, self-employed and landlord tax">
-  <meta property="og:description" content="Free UK income tax calculator: take-home pay, self-employment, property income, dividends, pensions, student loans and National Insurance, with every step of the calculation shown.">
+  <meta property="og:title" content="UK Income Tax Calculator - take-home pay, NI, student loan">
+  <meta property="og:description" content="Free UK income tax calculator for the current and previous tax year: take-home pay, National Insurance, student loans, pensions, self-employment and rental income.">
   <meta property="og:url" content="https://finance.farhan.app/income/">
   <meta property="og:image" content="https://finance.farhan.app/assets/og.png">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="UK Finance Tools: income tax and mortgage calculators">
   <meta property="og:locale" content="en_GB">
   <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="Income Tax Calculator - UK take-home pay, self-employed and landlord tax">
-  <meta name="twitter:description" content="Free UK income tax calculator: take-home pay, self-employment, property income, dividends, pensions, student loans and National Insurance, with every step of the calculation shown.">
+  <meta name="twitter:title" content="UK Income Tax Calculator - take-home pay, NI, student loan">
+  <meta name="twitter:description" content="Free UK income tax calculator for the current and previous tax year: take-home pay, National Insurance, student loans, pensions, self-employment and rental income.">
   <meta name="twitter:image" content="https://finance.farhan.app/assets/og.png">
+  <meta name="twitter:image:alt" content="UK Finance Tools: income tax and mortgage calculators">
   <script type="application/ld+json">{"@context": "https://schema.org", "@type": "WebApplication", "name": "UK Income Tax Calculator", "url": "https://finance.farhan.app/income/", "applicationCategory": "FinanceApplication", "operatingSystem": "Any", "browserRequirements": "Requires JavaScript", "offers": {"@type": "Offer", "price": "0", "priceCurrency": "GBP"}, "description": "Work out UK income tax, National Insurance, student loan repayments and take-home pay for employment, self-employment, property and investment income.", "author": {"@type": "Person", "name": "Farhan", "url": "https://farhan.app"}}</script>
+  <script type="application/ld+json">{"@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [{"@type": "ListItem", "position": 1, "name": "UK Finance Tools", "item": "https://finance.farhan.app/"}, {"@type": "ListItem", "position": 2, "name": "Income tax calculator", "item": "https://finance.farhan.app/income/"}]}</script>
   <link rel="preload" href="/assets/fonts/geist-variable.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="/assets/css/style.css?v=2bcd253f40">
+  <link rel="stylesheet" href="/assets/css/style.css?v=3371e6eea9">
   <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
   <script defer src="https://mochi.farhan.app/script.js" data-website-id="f43f5c82-286b-40d3-9101-30af20fb7742" data-exclude-search="true"></script>
 </head>
@@ -34,7 +37,7 @@
   <noscript><p class="noscript-note">These calculators run in your browser and need JavaScript turned on.</p></noscript>
   <header class="site-header">
     <div class="inner">
-      <a class="brand" href="/" aria-label="UK Finance Tools home" title="Home"><span class="logo">£</span><span class="brand-text">UK Finance Tools</span></a>
+      <a class="brand" href="/" aria-label="UK Finance Tools home"><span class="logo">£</span><span class="brand-text">UK Finance Tools</span></a>
       <nav class="site-nav" aria-label="Tools">
         <a href="/income/" aria-current="page">Income tax</a>
         <a href="/mortgage/">Mortgage</a>
@@ -43,10 +46,11 @@
   </header>
 
   <main class="container" id="main">
+    <div id="sr-status" class="visually-hidden" role="status" aria-live="polite" aria-atomic="true"></div>
     <h1 class="page-title">Income tax calculator</h1>
     <p class="page-intro">See how much income tax and National Insurance you'll pay and what you'll actually take home, whether you're employed, self-employed, a landlord, or a mix. Every figure is worked through step by step.</p>
     <div class="privacy-note" role="note">
-      <span class="privacy-icon" aria-hidden="true"><svg aria-hidden="true" focusable="false" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span>
+      <span class="privacy-icon"><svg aria-hidden="true" focusable="false" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span>
       <p><b>Private by design.</b> Everything you type stays on your device: the maths runs in your browser and nothing you enter is saved or sent to a server.</p>
     </div>
 
@@ -61,17 +65,17 @@
               <label for="taxYear">Tax year</label>
               <select id="taxYear" name="y" class="plain"></select>
             </div>
-            <div class="field">
-              <span class="label">Where you live</span>
-              <div class="segmented block" role="radiogroup" aria-label="Region">
+            <fieldset class="field">
+              <legend class="label">Where you live</legend>
+              <div class="segmented block">
                 <input type="radio" name="r" id="r-ruk" value="ruk" checked><label for="r-ruk">England, Wales or NI</label>
                 <input type="radio" name="r" id="r-scot" value="scotland"><label for="r-scot">Scotland</label>
               </div>
               <span class="hint">Scotland has its own income tax bands for earnings.</span>
-            </div>
-            <div class="field">
-              <span class="label">What income do you have?</span>
-              <div class="chips" id="income-chips" role="group" aria-label="Types of income">
+            </fieldset>
+            <fieldset class="field">
+              <legend class="label">What income do you have?</legend>
+              <div class="chips" id="income-chips">
                 <input type="checkbox" name="inc" id="inc-emp" value="emp" checked><label for="inc-emp">Employment (PAYE)</label>
                 <input type="checkbox" name="inc" id="inc-se" value="se"><label for="inc-se">Self-employment</label>
                 <input type="checkbox" name="inc" id="inc-prop" value="prop"><label for="inc-prop">Property</label>
@@ -79,7 +83,7 @@
                 <input type="checkbox" name="inc" id="inc-oth" value="oth"><label for="inc-oth">Pension or other</label>
               </div>
               <span class="hint">Tick everything that applies. Salary is taxed through PAYE; the rest is reported on a Self Assessment tax return.</span>
-            </div>
+            </fieldset>
           </div>
         </div>
 
@@ -109,13 +113,13 @@
               <span class="hint">Not sure? Most workplace schemes are "net pay" or "relief at source". Your payslip or pension provider will say which. Salary sacrifice is usually described as "salary exchange".</span>
             </div>
             <div class="stack" id="pension-row" hidden>
-              <div class="field">
-                <span class="label">Your contribution is</span>
-                <div class="segmented block" role="radiogroup" aria-label="Contribution type">
+              <fieldset class="field">
+                <legend class="label">Your contribution is</legend>
+                <div class="segmented block">
                   <input type="radio" name="pt" id="pt-percent" value="percent" checked><label for="pt-percent">A % of salary</label>
                   <input type="radio" name="pt" id="pt-amount" value="amount"><label for="pt-amount">A £ amount per year</label>
                 </div>
-              </div>
+              </fieldset>
               <div class="field">
                 <label for="pensionValue">Your contribution</label>
                 <div class="input-wrap">
@@ -165,15 +169,15 @@
                 <span class="hint">Business costs you can deduct.</span>
               </div>
             </div>
-            <div class="field">
-              <span class="label">Deduct from income</span>
-              <div class="segmented block" role="radiogroup" aria-label="Deduction method">
+            <fieldset class="field">
+              <legend class="label">Deduct from income</legend>
+              <div class="segmented block">
                 <input type="radio" name="ded" id="ded-auto" value="auto" checked><label for="ded-auto">Automatic</label>
                 <input type="radio" name="ded" id="ded-exp" value="expenses"><label for="ded-exp">Expenses</label>
                 <input type="radio" name="ded" id="ded-ta" value="trading_allowance"><label for="ded-ta">£1k allowance</label>
               </div>
               <span class="hint">You can claim the £1,000 trading allowance instead of expenses. "Automatic" uses whichever leaves you with less tax.</span>
-            </div>
+            </fieldset>
             <div class="field">
               <label for="sePension">Personal pension contributions <span class="muted">(optional)</span></label>
               <div class="input-wrap"><span class="affix">£</span><input id="sePension" name="sep" data-money placeholder="0"></div>
@@ -235,15 +239,15 @@
                 <span class="hint">From box 45 of last year's SA105, if the credit was capped.</span>
               </div>
             </div>
-            <div class="field">
-              <span class="label">Deduct from rent</span>
-              <div class="segmented block" role="radiogroup" aria-label="Property deduction method">
+            <fieldset class="field">
+              <legend class="label">Deduct from rent</legend>
+              <div class="segmented block">
                 <input type="radio" name="pded" id="pded-auto" value="auto" checked><label for="pded-auto">Automatic</label>
                 <input type="radio" name="pded" id="pded-exp" value="expenses"><label for="pded-exp">Expenses</label>
                 <input type="radio" name="pded" id="pded-pa" value="property_allowance"><label for="pded-pa">£1k allowance</label>
               </div>
               <span class="hint">The £1,000 property allowance replaces all expenses and the mortgage interest credit. "Automatic" uses whichever leaves you with less tax.</span>
-            </div>
+            </fieldset>
             <details class="explain options" id="prop-more">
               <summary>More property options</summary>
               <div class="body stack">
@@ -259,7 +263,7 @@
                 </div>
                 <label class="toggle">
                   <span><span class="label">Lodger income is shared with someone else</span><span class="sub">Halves the Rent a Room threshold to £3,750</span></span>
-                  <input type="checkbox" id="lodgerShared" name="lods" value="1"><span class="switch"></span>
+                  <input type="checkbox" id="lodgerShared" name="lods" value="1" role="switch"><span class="switch"></span>
                 </label>
               </div>
             </details>
@@ -310,7 +314,7 @@
             <input type="checkbox" name="sl" id="sl-plan5" value="plan5"><label for="sl-plan5">Plan 5</label>
             <input type="checkbox" name="sl" id="sl-pg" value="postgraduate"><label for="sl-pg">Postgraduate</label>
           </div>
-          <p class="hint muted small" style="margin-top:10px">Started an English or Welsh undergraduate course in or after 2023? That's Plan 5. Between 2012 and 2022? Plan 2. Before 2012? Plan 1. Scottish students are on Plan 4. <a href="https://www.gov.uk/repaying-your-student-loan/which-repayment-plan-you-are-on" target="_blank" rel="noopener">Check on GOV.UK</a>.</p>
+          <p class="hint muted small" style="margin-top:10px">Started an English or Welsh undergraduate course in or after 2023? That's Plan 5. Between 2012 and 2022? Plan 2. Before 2012? Plan 1. Scottish students are on Plan 4. <a href="https://www.gov.uk/repaying-your-student-loan/which-repayment-plan-you-are-on" target="_blank" rel="noopener">Check on GOV.UK<span class="visually-hidden"> (opens in a new tab)</span></a>.</p>
         </div>
 
         <details class="section" id="sec-adjust">
@@ -331,7 +335,7 @@
             </div>
             <label class="toggle">
               <span><span class="label">Blind Person's Allowance</span><span class="sub">Registered blind or severely sight impaired</span></span>
-              <input type="checkbox" id="blind" name="bpa" value="1"><span class="switch"></span>
+              <input type="checkbox" id="blind" name="bpa" value="1" role="switch"><span class="switch"></span>
             </label>
             <div class="field">
               <label for="children">Children you claim Child Benefit for</label>
@@ -340,7 +344,7 @@
             </div>
             <label class="toggle">
               <span><span class="label">Opted out of Child Benefit payments</span><span class="sub">Still registered, but not receiving the money (so no charge)</span></span>
-              <input type="checkbox" id="cbOptOut" name="cbo" value="1"><span class="switch"></span>
+              <input type="checkbox" id="cbOptOut" name="cbo" value="1" role="switch"><span class="switch"></span>
             </label>
           </div>
         </details>
@@ -364,6 +368,24 @@
         <div class="card"><p class="muted">Loading tax rates…</p></div>
       </section>
     </form>
+
+    <section class="card about" aria-labelledby="about-heading">
+      <h2 id="about-heading">About this income tax calculator</h2>
+      <p>This free calculator estimates how much income tax, National Insurance and student loan you pay in the UK, and what is left as take-home pay. It uses the official GOV.UK rates for the current and previous tax year and shows every step of the working, so you can check it against your payslip or tax return.</p>
+      <h3>What it covers</h3>
+      <ul>
+        <li>Employment income through PAYE, including bonuses, taxable benefits in kind, work expenses and Payroll Giving</li>
+        <li>Workplace pensions: salary sacrifice, net pay and relief at source</li>
+        <li>Self-employment profits with the trading allowance, plus Class 2 and Class 4 National Insurance</li>
+        <li>Rental income with the property allowance, Rent a Room relief and the landlord mortgage interest credit</li>
+        <li>Savings interest, dividends and other taxable income</li>
+        <li>Student loan Plans 1, 2, 4 and 5 and Postgraduate Loans</li>
+        <li>Gift Aid, Marriage Allowance, Blind Person's Allowance and the High Income Child Benefit Charge</li>
+        <li>Scottish income tax bands, with Wales and Northern Ireland using the rates for England</li>
+      </ul>
+      <h3>How accurate is it?</h3>
+      <p>The rates are stored for each tax year with a link to the GOV.UK page they come from, and are checked against GOV.UK every month. The calculator assumes you are UK resident with a standard tax code for a full tax year. It is for guidance only and is not financial advice. Need a mortgage figure too? Try the <a href="/mortgage/">mortgage calculator</a>.</p>
+    </section>
   </main>
 
   <div class="mobile-summary" id="mobile-summary" hidden>
@@ -380,10 +402,10 @@
         <span class="footer-sep" aria-hidden="true"></span>
         <a href="/mortgage/">Mortgage</a>
         <span class="footer-spacer"></span>
-        <span class="footer-built">Built by <a href="https://farhan.app" target="_blank" rel="noopener">Farhan</a></span>
+        <span class="footer-built">Built by <a href="https://farhan.app" target="_blank" rel="noopener">Farhan<span class="visually-hidden"> (opens in a new tab)</span></a></span>
       </nav>
     </div>
   </footer>
-  <script type="module" src="/assets/js/income.js?v=d81cf08ca5"></script>
+  <script type="module" src="/assets/js/income.js?v=cf64225890"></script>
 </body>
 </html>

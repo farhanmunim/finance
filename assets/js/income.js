@@ -1,5 +1,5 @@
 import { calculate, marginalRate, applyOverrides } from './tax-engine.js?v=fdea76ad1f';
-import { fmt, parseNum, initMoneyInputs, initNumberInputs, captionTables, $, $$, el, linesTable, urlState, debounce, loadJSON } from './ui.js?v=e6ed78c2b0';
+import { fmt, parseNum, initMoneyInputs, initNumberInputs, captionTables, $, $$, el, linesTable, urlState, debounce, loadJSON, announce, linkHints, externalLink } from './ui.js?v=6705e2c488';
 
 const state = { index: null, rates: {}, period: 'year', overrides: {}, editorKey: '' };
 const form = $('#form');
@@ -24,6 +24,7 @@ async function init() {
     restoreFromUrl();
     initMoneyInputs(form);
     initNumberInputs(form);
+    linkHints(form);
     bindEvents();
     await ensureRates(sel.value);
     syncVisibility();
@@ -190,6 +191,7 @@ function render() {
   $('#ms-month').textContent = fmt.gbp(r.totals.takeHomeMonthly);
   $('#ms-year').textContent = fmt.gbp(r.totals.takeHome);
   $('#mobile-summary').hidden = r.totals.cashIncome <= 0;
+  if (r.totals.cashIncome > 0) announce(`Take-home pay ${fmt.gbp(r.totals.takeHome)} a year, ${fmt.gbp(r.totals.takeHomeMonthly)} a month. Income tax ${fmt.gbp(r.totals.incomeTax)}, National Insurance ${fmt.gbp(r.totals.nationalInsurance)}.`);
 }
 
 const DIV = { year: 1, month: 12, week: 52 };
@@ -214,7 +216,7 @@ function explain(title, bodyNodes) {
 
 function heroCard(r, rates) {
   const t = r.totals;
-  const card = el('section', { class: 'card', 'aria-live': 'polite' });
+  const card = el('section', { class: 'card' });
   card.append(el('div', { class: 'card-header' }, [
     el('div', {}, [el('h2', { text: 'Your take-home pay' }), el('p', {}, [`Tax year ${rates.label}${r.region === 'scotland' ? ' · Scottish rates' : ''} `, Object.keys(state.overrides).length ? el('span', { class: 'badge', text: `Custom rates (${Object.keys(state.overrides).length} changed)` }) : null])]),
     periodSwitch(),
@@ -240,7 +242,7 @@ function heroCard(r, rates) {
     ['Child Benefit charge', t.hicbc, '#9ca3af'],
   ].filter((s) => s[1] > 0);
   const total = segs.reduce((s, x) => s + x[1], 0);
-  const bar = el('div', { class: 'split', role: 'img', 'aria-label': 'Where your income goes' });
+  const bar = el('div', { class: 'split', role: 'img', 'aria-label': `Where your income goes: ${segs.map(([label, v]) => `${label} ${fmt.pct(v / total, 0)}`).join(', ')}` });
   const legend = el('div', { class: 'legend' });
   for (const [label, v, c] of segs) {
     bar.append(el('span', { style: `width:${(v / total) * 100}%;background:${c}`, title: `${label}: ${fmt.gbp(v)}` }));
@@ -555,7 +557,7 @@ function sourcesCard(rates) {
     el('li', { text: 'Employee NI is calculated annually. Losses, capital gains, pension annual allowance limits and tapered allowances for very high earners are not modelled.' }),
   ]));
   card.append(el('h3', { text: 'Official sources', style: 'margin-bottom:8px' }));
-  card.append(el('ul', { class: 'sources' }, rates.sources.map((s) => el('li', {}, [el('a', { href: s.url, target: '_blank', rel: 'noopener', text: s.title }), el('span', { text: s.covers.join(' · ') })]))));
+  card.append(el('ul', { class: 'sources' }, rates.sources.map((s) => el('li', {}, [externalLink(s.url, s.title), el('span', { text: s.covers.join(' · ') })]))));
   return card;
 }
 
@@ -627,7 +629,7 @@ function buildRatesEditor(force) {
   const root = $('#rates-editor');
   root.innerHTML = '';
   for (const g of rateFields(base, region)) {
-    root.append(el('h3', { text: g.group }));
+    const group = el('fieldset', { class: 'rates-group' }, el('legend', { text: g.group }));
     const grid = el('div', { class: 'rates-grid' });
     for (const [path, label, type, noLimit] of g.fields) {
       const baseVal = getPath(base, path);
@@ -637,7 +639,8 @@ function buildRatesEditor(force) {
       const wrap = el('div', { class: 'input-wrap' + (state.overrides[path] != null ? ' changed' : '') }, type === 'pct' ? [input, el('span', { class: 'affix suffix', text: '%' })] : [el('span', { class: 'affix', text: '£' }), input]);
       grid.append(el('div', { class: 'field' }, [el('label', { for: id, text: label }), wrap]));
     }
-    root.append(grid);
+    group.append(grid);
+    root.append(group);
   }
 }
 
