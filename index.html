@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>UK Finance Tools - income tax and mortgage calculators</title>
-  <meta name="description" content="Simple, accurate UK take-home pay calculator (income tax, National Insurance, student loans, pensions) and a mortgage overpayment calculator.">
+  <title>UK Finance Tools - income tax, mortgage and pension calculators</title>
+  <meta name="description" content="Simple, accurate UK take-home pay calculator (income tax, National Insurance, student loans), a mortgage overpayment calculator and a pension calculator.">
     <link rel="canonical" href="https://finance.farhan.app/">
   <meta name="robots" content="index, follow">
   <meta name="author" content="Farhan">
@@ -12,20 +12,20 @@
   <meta name="theme-color" content="#18181b">
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="UK Finance Tools">
-  <meta property="og:title" content="UK Finance Tools - income tax and mortgage calculators">
-  <meta property="og:description" content="Free UK income tax and mortgage calculators built on official GOV.UK rates. Everything runs in your browser; nothing you enter is stored or sent.">
+  <meta property="og:title" content="UK Finance Tools - income tax, mortgage and pension calculators">
+  <meta property="og:description" content="Free UK income tax, mortgage and pension calculators built on official GOV.UK rates. Everything runs in your browser; nothing you enter is stored or sent.">
   <meta property="og:url" content="https://finance.farhan.app/">
   <meta property="og:image" content="https://finance.farhan.app/assets/og.png">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
-  <meta property="og:image:alt" content="UK Finance Tools: income tax and mortgage calculators">
+  <meta property="og:image:alt" content="UK Finance Tools: income tax, mortgage and pension calculators">
   <meta property="og:locale" content="en_GB">
   <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="UK Finance Tools - income tax and mortgage calculators">
-  <meta name="twitter:description" content="Free UK income tax and mortgage calculators built on official GOV.UK rates. Everything runs in your browser; nothing you enter is stored or sent.">
+  <meta name="twitter:title" content="UK Finance Tools - income tax, mortgage and pension calculators">
+  <meta name="twitter:description" content="Free UK income tax, mortgage and pension calculators built on official GOV.UK rates. Everything runs in your browser; nothing you enter is stored or sent.">
   <meta name="twitter:image" content="https://finance.farhan.app/assets/og.png">
-  <meta name="twitter:image:alt" content="UK Finance Tools: income tax and mortgage calculators">
-  <script type="application/ld+json">{"@context": "https://schema.org", "@type": "WebSite", "name": "UK Finance Tools", "url": "https://finance.farhan.app", "description": "Free UK income tax and mortgage calculators built on official GOV.UK rates.", "inLanguage": "en-GB", "author": {"@type": "Person", "name": "Farhan", "url": "https://farhan.app"}}</script>
+  <meta name="twitter:image:alt" content="UK Finance Tools: income tax, mortgage and pension calculators">
+  <script type="application/ld+json">{"@context": "https://schema.org", "@type": "WebSite", "name": "UK Finance Tools", "url": "https://finance.farhan.app", "description": "Free UK income tax, mortgage and pension calculators built on official GOV.UK rates.", "inLanguage": "en-GB", "author": {"@type": "Person", "name": "Farhan", "url": "https://farhan.app"}}</script>
   <link rel="preload" href="/assets/fonts/geist-variable.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="/assets/css/style.css?v=3371e6eea9">
   <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
@@ -40,14 +40,15 @@
       <nav class="site-nav" aria-label="Tools">
         <a href="/income/">Income tax</a>
         <a href="/mortgage/">Mortgage</a>
+        <a href="/pension/">Pension</a>
       </nav>
     </div>
   </header>
 
   <main class="container" id="main">
     <div class="hero-block">
-      <h1>Clear answers to two everyday money questions.</h1>
-      <p>Free calculators for income tax and mortgages, built on the official GOV.UK rates.</p>
+      <h1>Clear answers to three everyday money questions.</h1>
+      <p>Free calculators for income tax, mortgages and pensions, built on the official GOV.UK rates.</p>
     </div>
     <div class="privacy-note" style="margin-top:20px" role="note">
       <span class="privacy-icon"><svg aria-hidden="true" focusable="false" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span>
@@ -67,6 +68,12 @@
         <p id="tool-mortgage-d">What will your mortgage cost? Monthly payments, total interest, what overpaying saves, overpay-versus-save, rate changes and buy-to-let tax.</p>
         <span class="cta" aria-hidden="true">Explore your mortgage →</span>
       </a></li>
+      <li><a class="tool-card" href="/pension/" aria-labelledby="tool-pension-h" aria-describedby="tool-pension-d">
+        <div class="icon" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a9 9 0 1 0 9 9"/><path d="M12 3v9h9"/><path d="M12 8.5v.01"/></svg></div>
+        <h2 id="tool-pension-h">Pension calculator</h2>
+        <p id="tool-pension-d">What will your pension pay? Project your pot, tax relief, State Pension and monthly income after tax, and see how paying in more or retiring later changes it.</p>
+        <span class="cta" aria-hidden="true">Plan your retirement income →</span>
+      </a></li>
     </ul>
 
     <section class="card" style="margin-top:24px" aria-labelledby="accuracy-h">
@@ -82,6 +89,8 @@
         <a href="/income/">Income tax</a>
         <span class="footer-sep" aria-hidden="true"></span>
         <a href="/mortgage/">Mortgage</a>
+        <span class="footer-sep" aria-hidden="true"></span>
+        <a href="/pension/">Pension</a>
         <span class="footer-spacer"></span>
         <span class="footer-built">Built by <a href="https://farhan.app" target="_blank" rel="noopener">Farhan<span class="visually-hidden"> (opens in a new tab)</span></a></span>
       </nav>

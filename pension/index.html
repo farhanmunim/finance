@@ -1,0 +1,329 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>UK Pension Calculator - pot size and retirement income</title>
+  <meta name="description" content="Project your pension pot and what it could pay each month in retirement, with tax relief, State Pension, income tax and a target to aim for.">
+    <link rel="canonical" href="https://finance.farhan.app/pension/">
+  <meta name="robots" content="index, follow">
+  <meta name="author" content="Farhan">
+  <meta name="color-scheme" content="light">
+  <meta name="theme-color" content="#18181b">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="UK Finance Tools">
+  <meta property="og:title" content="UK Pension Calculator - pot size and retirement income">
+  <meta property="og:description" content="Free UK pension calculator: projected pot, monthly retirement income after tax, State Pension, tax relief, retiring earlier or later and how much more to pay in.">
+  <meta property="og:url" content="https://finance.farhan.app/pension/">
+  <meta property="og:image" content="https://finance.farhan.app/assets/og.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="UK Finance Tools: income tax, mortgage and pension calculators">
+  <meta property="og:locale" content="en_GB">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="UK Pension Calculator - pot size and retirement income">
+  <meta name="twitter:description" content="Free UK pension calculator: projected pot, monthly retirement income after tax, State Pension, tax relief, retiring earlier or later and how much more to pay in.">
+  <meta name="twitter:image" content="https://finance.farhan.app/assets/og.png">
+  <meta name="twitter:image:alt" content="UK Finance Tools: income tax, mortgage and pension calculators">
+  <script type="application/ld+json">{"@context": "https://schema.org", "@type": "WebApplication", "name": "UK Pension Calculator", "url": "https://finance.farhan.app/pension/", "applicationCategory": "FinanceApplication", "operatingSystem": "Any", "browserRequirements": "Requires JavaScript", "offers": {"@type": "Offer", "price": "0", "priceCurrency": "GBP"}, "description": "Project your pension pot and retirement income, including State Pension, tax relief and income tax.", "author": {"@type": "Person", "name": "Farhan", "url": "https://farhan.app"}}</script>
+  <script type="application/ld+json">{"@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [{"@type": "ListItem", "position": 1, "name": "UK Finance Tools", "item": "https://finance.farhan.app/"}, {"@type": "ListItem", "position": 2, "name": "Pension calculator", "item": "https://finance.farhan.app/pension/"}]}</script>
+  <link rel="preload" href="/assets/fonts/geist-variable.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="/assets/css/style.css?v=3371e6eea9">
+  <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+  <script defer src="https://mochi.farhan.app/script.js" data-website-id="f43f5c82-286b-40d3-9101-30af20fb7742" data-exclude-search="true"></script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to main content</a>
+  <noscript><p class="noscript-note">These calculators run in your browser and need JavaScript turned on.</p></noscript>
+  <header class="site-header">
+    <div class="inner">
+      <a class="brand" href="/" aria-label="UK Finance Tools home"><span class="logo">£</span><span class="brand-text">UK Finance Tools</span></a>
+      <nav class="site-nav" aria-label="Tools">
+        <a href="/income/">Income tax</a>
+        <a href="/mortgage/">Mortgage</a>
+        <a href="/pension/" aria-current="page">Pension</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container" id="main">
+    <div id="sr-status" class="visually-hidden" role="status" aria-live="polite" aria-atomic="true"></div>
+    <h1 class="page-title">Pension calculator</h1>
+    <p class="page-intro">See how big your pension pot could grow, what it could pay you each month once you retire, and how much more to pay in if you want a higher income.</p>
+    <div class="privacy-note" role="note">
+      <span class="privacy-icon"><svg aria-hidden="true" focusable="false" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span>
+      <p><b>Private by design.</b> Everything you type stays on your device: the maths runs in your browser and nothing you enter is saved or sent to a server.</p>
+    </div>
+
+    <form id="form" class="tool-layout" autocomplete="off" novalidate aria-label="Calculator inputs">
+      <div class="inputs-col">
+        <div class="card">
+          <div class="card-header"><div><h2>About you</h2><p>Your age, when you want to stop work and what you earn.</p></div></div>
+          <div class="stack">
+            <div class="row">
+              <div class="field">
+                <label for="age">Your age now</label>
+                <div class="input-wrap"><input id="age" name="a" type="number" min="16" max="75" step="1" placeholder="e.g. 35"><span class="affix suffix">years</span></div>
+              </div>
+              <div class="field">
+                <label for="retireAge">Retire at</label>
+                <div class="input-wrap"><input id="retireAge" name="ra" type="number" min="40" max="80" step="1" placeholder="e.g. 67"><span class="affix suffix">years</span></div>
+              </div>
+            </div>
+            <div class="note-box" id="age-note" hidden></div>
+            <div class="field">
+              <label for="salary">Annual salary</label>
+              <div class="input-wrap"><span class="affix">£</span><input id="salary" name="sal" data-money placeholder="e.g. 45,000"></div>
+              <span class="hint">Before tax. Optional, but needed for tax relief, percentages of salary and tax on your retirement income.</span>
+            </div>
+            <fieldset class="field">
+              <legend class="label">Where you live</legend>
+              <div class="segmented block">
+                <input type="radio" name="reg" id="reg-ruk" value="ruk" checked><label for="reg-ruk">England, Wales or NI</label>
+                <input type="radio" name="reg" id="reg-scot" value="scotland"><label for="reg-scot">Scotland</label>
+              </div>
+            </fieldset>
+            <label class="toggle">
+              <span><span class="label">Show results in today's money</span><span class="sub">Adjusts for inflation so figures mean what they would buy now</span></span>
+              <input type="checkbox" id="real" name="rl" value="1" role="switch" checked><span class="switch"></span>
+            </label>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header"><div><h2>Your pot and what you pay in</h2><p>Add up all your pensions into one pot.</p></div></div>
+          <div class="stack">
+            <div class="field">
+              <label for="pot">Pension pot today</label>
+              <div class="input-wrap"><span class="affix">£</span><input id="pot" name="p" data-money placeholder="0"></div>
+              <span class="hint">Leave empty if you are starting from nothing.</span>
+            </div>
+            <div class="field">
+              <label for="contrib">You pay in</label>
+              <div class="row" style="grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr)">
+                <div class="input-wrap"><span class="affix" id="contribAffix">£</span><input id="contrib" name="c" inputmode="decimal" placeholder="e.g. 250" aria-describedby="contrib-hint"></div>
+                <label class="visually-hidden" for="cfreq">How often you pay in</label>
+                <select id="cfreq" name="cf" class="plain">
+                  <option value="weekly">a week</option>
+                  <option value="monthly" selected>a month</option>
+                  <option value="quarterly">a quarter</option>
+                  <option value="yearly">a year</option>
+                </select>
+              </div>
+              <div class="segmented mini" style="margin-top:8px" role="radiogroup" aria-label="Contribution entered as">
+                <input type="radio" name="ct" id="ct-amount" value="amount" checked><label for="ct-amount">£ amount</label>
+                <input type="radio" name="ct" id="ct-percent" value="percent"><label for="ct-percent">% of salary</label>
+              </div>
+              <span class="hint" id="contrib-hint">Include tax relief the provider adds, so this is the total that goes into your pot.</span>
+            </div>
+            <div class="field">
+              <label for="method">How it is paid</label>
+              <select id="method" name="cm" class="plain">
+                <option value="relief_at_source">Relief at source (most personal pensions)</option>
+                <option value="net_pay">Net pay (many workplace schemes)</option>
+                <option value="salary_sacrifice">Salary sacrifice</option>
+              </select>
+              <span class="hint" id="method-hint"></span>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header"><div><h2>Your employer</h2><p>Optional. Free money added on top of what you pay.</p></div></div>
+          <div class="stack">
+            <fieldset class="field">
+              <legend class="label">Your employer pays</legend>
+              <div class="segmented block">
+                <input type="radio" name="et" id="et-percent" value="percent" checked><label for="et-percent">% of salary</label>
+                <input type="radio" name="et" id="et-amount" value="amount"><label for="et-amount">£ amount</label>
+                <input type="radio" name="et" id="et-match" value="match"><label for="et-match">Matches mine</label>
+              </div>
+            </fieldset>
+            <div class="field" id="emp-percent-field">
+              <label for="empPercent">Employer contribution</label>
+              <div class="input-wrap"><input id="empPercent" name="ep" type="number" min="0" max="100" step="0.1" placeholder="e.g. 3"><span class="affix suffix">% of salary</span></div>
+            </div>
+            <div class="field" id="emp-amount-field" hidden>
+              <label for="empAmount">Employer contribution</label>
+              <div class="row" style="grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr)">
+                <div class="input-wrap"><span class="affix">£</span><input id="empAmount" name="ea" data-money placeholder="e.g. 150"></div>
+                <label class="visually-hidden" for="empFreq">How often your employer pays in</label>
+                <select id="empFreq" name="ef" class="plain">
+                  <option value="weekly">a week</option>
+                  <option value="monthly" selected>a month</option>
+                  <option value="quarterly">a quarter</option>
+                  <option value="yearly">a year</option>
+                </select>
+              </div>
+            </div>
+            <div class="field" id="emp-match-field" hidden>
+              <label for="empMatch">Matched up to</label>
+              <div class="input-wrap"><input id="empMatch" name="em" type="number" min="0" max="100" step="0.1" placeholder="e.g. 5"><span class="affix suffix">% of salary</span></div>
+              <span class="hint">Your employer pays in as much as you do, up to this share of your salary.</span>
+            </div>
+          </div>
+        </div>
+
+        <details class="section" id="sec-sp">
+          <summary><span>State Pension<span class="sub">Added to your income from State Pension age</span></span></summary>
+          <div class="body stack">
+            <label class="toggle">
+              <span><span class="label">Include the State Pension</span><span class="sub">The new State Pension, paid by the government</span></span>
+              <input type="checkbox" id="includeSP" name="sp" value="1" role="switch" checked><span class="switch"></span>
+            </label>
+            <div class="row">
+              <div class="field">
+                <label for="spa">State Pension age</label>
+                <div class="input-wrap"><input id="spa" name="sa" type="number" min="60" max="75" step="1" placeholder="e.g. 67"><span class="affix suffix">years</span></div>
+                <span class="hint">Estimated from your age. Check yours on <a href="https://www.gov.uk/state-pension-age" target="_blank" rel="noopener">GOV.UK<span class="visually-hidden"> (opens in a new tab)</span></a>.</span>
+              </div>
+              <div class="field">
+                <label for="qyears">Qualifying years so far</label>
+                <div class="input-wrap"><input id="qyears" name="ny" type="number" min="0" max="35" step="1" placeholder="e.g. 20"><span class="affix suffix">of 35</span></div>
+                <span class="hint">Years of National Insurance paid or credited. <a href="https://www.gov.uk/check-state-pension" target="_blank" rel="noopener">Check your forecast<span class="visually-hidden"> (opens in a new tab)</span></a>.</span>
+              </div>
+            </div>
+          </div>
+        </details>
+
+        <details class="section" id="sec-take">
+          <summary><span>Taking your pension<span class="sub">Drawdown or annuity, tax-free cash and other income</span></span></summary>
+          <div class="body stack">
+            <fieldset class="field">
+              <legend class="label">How you take it</legend>
+              <div class="segmented block">
+                <input type="radio" name="im" id="im-draw" value="drawdown" checked><label for="im-draw">Drawdown</label>
+                <input type="radio" name="im" id="im-ann" value="annuity"><label for="im-ann">Annuity</label>
+              </div>
+              <span class="hint" id="im-hint">Keep the pot invested and take an income from it. It can run out if you take too much.</span>
+            </fieldset>
+            <div class="field" id="wr-field">
+              <label for="wr">Withdrawal rate</label>
+              <div class="input-wrap"><input id="wr" name="wr" type="number" min="0.5" max="15" step="0.1" placeholder="4"><span class="affix suffix">% a year</span></div>
+              <span class="hint">Share of the pot you take in the first year, then rising with inflation. 4% is a common rule of thumb.</span>
+            </div>
+            <div id="ann-fields" class="stack" hidden>
+              <div class="field">
+                <label for="ar">Annuity rate</label>
+                <div class="input-wrap"><input id="ar" name="ar" type="number" min="1" max="20" step="0.1" placeholder="e.g. 6.8"><span class="affix suffix">% a year</span></div>
+                <span class="hint" id="ar-hint">Yearly income for every £100 you hand over. Ask a provider for a quote.</span>
+              </div>
+              <label class="toggle">
+                <span><span class="label">Rises with inflation</span><span class="sub">Pays less to start with, but keeps its buying power</span></span>
+                <input type="checkbox" id="annRises" name="ai" value="1" role="switch"><span class="switch"></span>
+              </label>
+            </div>
+            <fieldset class="field">
+              <legend class="label">Tax-free cash</legend>
+              <div class="segmented block">
+                <input type="radio" name="tf" id="tf-up" value="upfront" checked><label for="tf-up">25% lump sum</label>
+                <input type="radio" name="tf" id="tf-spread" value="spread"><label for="tf-spread">25% of each payment</label>
+                <input type="radio" name="tf" id="tf-none" value="none"><label for="tf-none">None</label>
+              </div>
+              <span class="hint" id="tf-hint">Take a quarter of the pot tax-free at retirement. The rest pays your income.</span>
+            </fieldset>
+            <div class="field">
+              <label for="otherIncome">Other taxable income in retirement</label>
+              <div class="input-wrap"><span class="affix">£</span><input id="otherIncome" name="oi" data-money placeholder="0"><span class="affix suffix">a year</span></div>
+              <span class="hint">For example a workplace final salary pension or rent, in today's money.</span>
+            </div>
+          </div>
+        </details>
+
+        <details class="section" id="sec-target">
+          <summary><span>Your target income<span class="sub">See if you are on track and what it would take</span></span></summary>
+          <div class="body stack">
+            <div class="field">
+              <label for="target">Monthly income you would like</label>
+              <div class="input-wrap"><span class="affix">£</span><input id="target" name="tg" data-money placeholder="e.g. 2,000"><span class="affix suffix">a month</span></div>
+              <span class="hint">After tax, in today's money. We'll show the gap and how much more to pay in each month to close it.</span>
+            </div>
+          </div>
+        </details>
+
+        <details class="section" id="sec-assume">
+          <summary><span>Assumptions<span class="sub">Growth, charges, inflation and pay rises</span></span></summary>
+          <div class="body stack">
+            <div class="row">
+              <div class="field">
+                <label for="growth">Investment growth</label>
+                <div class="input-wrap"><input id="growth" name="g" type="number" min="-5" max="15" step="0.1" placeholder="5"><span class="affix suffix">% a year</span></div>
+                <span class="hint">Before charges, while saving.</span>
+              </div>
+              <div class="field">
+                <label for="charges">Annual charges</label>
+                <div class="input-wrap"><input id="charges" name="ch" type="number" min="0" max="5" step="0.05" placeholder="0.75"><span class="affix suffix">% a year</span></div>
+                <span class="hint">Fund and platform fees combined.</span>
+              </div>
+            </div>
+            <div class="row">
+              <div class="field">
+                <label for="inflation">Inflation</label>
+                <div class="input-wrap"><input id="inflation" name="inf" type="number" min="0" max="15" step="0.1" placeholder="2.5"><span class="affix suffix">% a year</span></div>
+              </div>
+              <div class="field">
+                <label for="payRise">Pay rises</label>
+                <div class="input-wrap"><input id="payRise" name="pr" type="number" min="0" max="15" step="0.1" placeholder="2.5"><span class="affix suffix">% a year</span></div>
+                <span class="hint">Grows your salary, and so contributions set as a % of it.</span>
+              </div>
+            </div>
+            <div class="field">
+              <label for="retireGrowth">Growth in retirement</label>
+              <div class="input-wrap"><input id="retireGrowth" name="rg" type="number" min="-5" max="15" step="0.1" placeholder="4"><span class="affix suffix">% a year</span></div>
+              <span class="hint">Before charges. Usually lower than before retirement because money moves into safer investments.</span>
+            </div>
+            <label class="toggle">
+              <span><span class="label">Raise my £ payments with pay</span><span class="sub">Otherwise a fixed £ amount stays the same each year</span></span>
+              <input type="checkbox" id="escalate" name="es" value="1" role="switch"><span class="switch"></span>
+            </label>
+          </div>
+        </details>
+
+        <p class="muted small" style="margin-top:16px">Results update as you type. Your inputs are saved in the page address so you can bookmark or share them.</p>
+      </div>
+
+      <section class="results-col" id="results" aria-label="Results">
+        <div class="card"><p class="muted">Enter your age and retirement age, and what you pay in, to see your projected pot and retirement income.</p></div>
+      </section>
+    </form>
+
+    <section class="card about" aria-labelledby="about-heading">
+      <h2 id="about-heading">About this pension calculator</h2>
+      <p>This free calculator projects how big your pension pot could be when you retire and what income it could provide. Enter your age, the age you want to retire, what you and your employer pay in, and it grows the pot month by month after charges, then turns it into a monthly income after income tax. It includes the new State Pension and works for most workplace and personal pensions.</p>
+      <h3>What it shows</h3>
+      <ul>
+        <li>Your projected pot at retirement, in today's money or in future pounds, and where it came from</li>
+        <li>Your monthly income in retirement after tax, with and without the State Pension</li>
+        <li>What paying in really costs you once tax relief is counted, for relief at source, net pay and salary sacrifice</li>
+        <li>How long a drawdown pot could last, or the income a lifetime annuity could give</li>
+        <li>Whether you are on track for a target income, and how much more to pay in each month to reach it</li>
+        <li>What paying in more, retiring earlier or later, or lower investment growth would change</li>
+      </ul>
+      <h3>How it is calculated</h3>
+      <p>Growth is added monthly at an equivalent rate to the yearly figure you enter, less charges, and contributions are paid in at the end of each month. Retirement income and tax are worked out in today's money using this year's tax bands, assuming they rise with inflation. It does not model final salary pensions, specific providers or funds, the lifetime allowance rules for very large pots, or carry forward. It is for guidance only and is not financial advice. To see your pay before retirement, try the <a href="/income/">income tax calculator</a>.</p>
+    </section>
+  </main>
+
+  <div class="mobile-summary" id="mobile-summary" hidden>
+    <div><div class="k">Monthly income</div><div class="v" id="ms-inc">£0</div></div>
+    <div style="text-align:right"><div class="k">Pot at retirement</div><div class="v" id="ms-pot">£0</div></div>
+    <a href="#results">Details ↓</a>
+  </div>
+
+  <footer class="site-footer">
+    <div class="inner">
+      <p class="footer-note">Figures are based on published GOV.UK rates and are for guidance only, not financial advice. Check your own position with HMRC or a qualified adviser.</p>
+      <nav class="footer-bar" aria-label="Footer">
+        <a href="/income/">Income tax</a>
+        <span class="footer-sep" aria-hidden="true"></span>
+        <a href="/mortgage/">Mortgage</a>
+        <span class="footer-sep" aria-hidden="true"></span>
+        <a href="/pension/">Pension</a>
+        <span class="footer-spacer"></span>
+        <span class="footer-built">Built by <a href="https://farhan.app" target="_blank" rel="noopener">Farhan<span class="visually-hidden"> (opens in a new tab)</span></a></span>
+      </nav>
+    </div>
+  </footer>
+  <script type="module" src="/assets/js/pension.js?v=4e22bea4be"></script>
+</body>
+</html>

@@ -1,11 +1,12 @@
 # UK Finance Tools
 
-Two small, fast calculators built with plain HTML, CSS and JavaScript. No frameworks, no build step, no tracking. Designed for Cloudflare Pages (free tier) but any static host works.
+Three small, fast calculators built with plain HTML, CSS and JavaScript. No frameworks, no build step, no tracking. Designed for Cloudflare Pages (free tier) but any static host works.
 
 | Tool | Path | What it does |
 | --- | --- | --- |
 | Income tax | `/income/` | Income tax, National Insurance, student loan and pension deductions for employees, the self-employed, or both, plus property income, Child Benefit and every rate editable, with each step shown. |
 | Mortgage | `/mortgage/` | Monthly payment, total interest, fixed-rate periods, interest-only, overpayments, overpay-vs-save break-even, rate sensitivity, LTV tiers and buy-to-let tax. |
+| Pension | `/pension/` | Projected pot, monthly retirement income after tax (drawdown or annuity), State Pension, tax relief, employer contributions, a target income, and what paying in more, retiring earlier or later or lower growth would change. |
 
 ## Deploying to Cloudflare Pages
 
@@ -20,7 +21,7 @@ Two small, fast calculators built with plain HTML, CSS and JavaScript. No framew
 
 ```bash
 npm run serve        # http://localhost:8080
-npm test             # unit tests for both calculation engines (node:test, no dependencies)
+npm test             # unit tests for the calculation engines and page checks (node:test, no dependencies)
 ```
 
 Node 20+ is required for the scripts and tests. The site itself needs only a browser.

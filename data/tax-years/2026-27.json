@@ -158,7 +158,17 @@
   },
   "pensions": {
     "annualAllowance": 60000,
-    "reliefMinimumGross": 3600
+    "reliefMinimumGross": 3600,
+    "taxFreeShare": 0.25,
+    "lumpSumAllowance": 268275,
+    "taperThresholdIncome": 200000,
+    "taperAdjustedIncome": 260000,
+    "taperMinimumAllowance": 10000,
+    "minimumPensionAge": 55,
+    "minimumPensionAgeFrom2028": 57,
+    "statePensionNewWeekly": 241.3,
+    "statePensionFullYears": 35,
+    "statePensionMinimumYears": 10
   },
   "selfAssessment": {
     "paymentsOnAccountMinimum": 1000,
@@ -303,7 +313,35 @@
       "url": "https://www.gov.uk/tax-on-your-private-pension/pension-tax-relief",
       "covers": [
         "Relief limit (100% of earnings or £3,600)",
-        "Annual allowance"
+        "Annual allowance",
+        "Annual allowance taper"
+      ]
+    },
+    {
+      "id": "new-state-pension",
+      "title": "The new State Pension: what you'll get",
+      "url": "https://www.gov.uk/new-state-pension/what-youll-get",
+      "covers": [
+        "Full new State Pension weekly rate",
+        "Qualifying years needed (35 for the full amount, 10 minimum)"
+      ]
+    },
+    {
+      "id": "state-pension-age",
+      "title": "Check your State Pension age",
+      "url": "https://www.gov.uk/state-pension-age",
+      "covers": [
+        "State Pension age by date of birth"
+      ]
+    },
+    {
+      "id": "lump-sum-allowance",
+      "title": "Tax on your private pension: lump sum allowance",
+      "url": "https://www.gov.uk/tax-on-your-private-pension/lump-sum-allowance",
+      "covers": [
+        "25% tax-free share",
+        "Lump sum allowance",
+        "Normal minimum pension age"
       ]
     },
     {

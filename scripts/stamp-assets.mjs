@@ -20,7 +20,7 @@ import { resolve, basename } from 'node:path';
 const CHECK = process.argv.includes('--check');
 const root = resolve(new URL('..', import.meta.url).pathname);
 const jsDir = resolve(root, 'assets/js');
-const htmlFiles = ['index.html', 'income/index.html', 'mortgage/index.html', '404.html'].map((f) => resolve(root, f));
+const htmlFiles = ['index.html', 'income/index.html', 'mortgage/index.html', 'pension/index.html', '404.html'].map((f) => resolve(root, f));
 const cssFile = resolve(root, 'assets/css/style.css');
 const dataDir = resolve(root, 'data/tax-years');
 

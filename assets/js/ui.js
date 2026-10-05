@@ -167,7 +167,7 @@ export function debounce(fn, ms = 120) {
 
 // Stamped by scripts/stamp-assets.mjs; changes whenever the tax-year data changes so that
 // browsers never pair new code with cached old data.
-export const DATA_VERSION = 'fe33481113';
+export const DATA_VERSION = '5acc158ffc';
 
 /** Fetch JSON with a timeout and one retry, so a stalled request cannot leave the page loading forever. */
 export async function loadJSON(url, { timeoutMs = 10000, retries = 1 } = {}) {

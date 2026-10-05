@@ -1,7 +1,7 @@
 {
   "name": "uk-finance-tools",
   "version": "1.0.0",
-  "description": "UK income tax / take-home pay calculator and mortgage overpayment tool. Static site (vanilla HTML/CSS/JS) for Cloudflare Pages.",
+  "description": "UK income tax / take-home pay calculator, mortgage overpayment tool and pension calculator. Static site (vanilla HTML/CSS/JS) for Cloudflare Pages.",
   "private": true,
   "type": "module",
   "scripts": {

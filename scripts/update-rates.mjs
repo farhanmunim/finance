@@ -170,6 +170,12 @@ async function run() {
       set('incomeTax.rentARoom.sharedThreshold', m(p.text, /halved to £([\d,]+)/), p.url);
     } catch (e) { problems.push(`Rent a Room page: ${e.message}`); }
     try {
+      const p = await page('new-state-pension/what-youll-get');
+      const weekly = m(p.text, /full new State Pension is £([\d.]+) (?:a|per) week/i);
+      if (weekly === undefined) problems.push('Could not read the full new State Pension rate');
+      set('pensions.statePensionNewWeekly', weekly, p.url);
+    } catch (e) { problems.push(`State Pension page: ${e.message}`); }
+    try {
       const p = await page('guidance/tax-free-allowances-on-property-and-trading-income');
       set('incomeTax.tradingAllowance', m(p.text, /up to £([\d,]+) each tax year in tax-free allowances for property or trading income/), p.url);
     } catch (e) { problems.push(`Trading allowance page: ${e.message}`); }

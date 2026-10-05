@@ -1,5 +1,5 @@
 import { calculate, marginalRate, applyOverrides } from './tax-engine.js?v=fdea76ad1f';
-import { fmt, parseNum, initMoneyInputs, initNumberInputs, captionTables, $, $$, el, linesTable, urlState, debounce, loadJSON, announce, linkHints, externalLink } from './ui.js?v=6705e2c488';
+import { fmt, parseNum, initMoneyInputs, initNumberInputs, captionTables, $, $$, el, linesTable, urlState, debounce, loadJSON, announce, linkHints, externalLink } from './ui.js?v=60c2d4f53d';
 
 const state = { index: null, rates: {}, period: 'year', overrides: {}, editorKey: '' };
 const form = $('#form');
