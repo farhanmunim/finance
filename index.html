@@ -3,16 +3,16 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>UK Finance Tools - income tax, mortgage and pension calculators</title>
-  <meta name="description" content="Simple, accurate UK take-home pay calculator (income tax, National Insurance, student loans), a mortgage overpayment calculator and a pension calculator.">
+  <title>UK Finance Tools — farhan.app</title>
+  <meta name="description" content="Free UK income tax, mortgage and pension calculators built on official GOV.UK rates. Built by Farhan — farhan.app">
     <link rel="canonical" href="https://finance.farhan.app/">
   <meta name="robots" content="index, follow">
-  <meta name="author" content="Farhan">
+  <meta name="author" content="farhan.app">
   <meta name="color-scheme" content="light">
   <meta name="theme-color" content="#18181b">
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="UK Finance Tools">
-  <meta property="og:title" content="UK Finance Tools - income tax, mortgage and pension calculators">
+  <meta property="og:title" content="UK Finance Tools — farhan.app">
   <meta property="og:description" content="Free UK income tax, mortgage and pension calculators built on official GOV.UK rates. Everything runs in your browser; nothing you enter is stored or sent.">
   <meta property="og:url" content="https://finance.farhan.app/">
   <meta property="og:image" content="https://finance.farhan.app/assets/og.png">
@@ -20,15 +20,15 @@
   <meta property="og:image:height" content="630">
   <meta property="og:image:alt" content="UK Finance Tools: income tax, mortgage and pension calculators">
   <meta property="og:locale" content="en_GB">
-  <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="UK Finance Tools - income tax, mortgage and pension calculators">
-  <meta name="twitter:description" content="Free UK income tax, mortgage and pension calculators built on official GOV.UK rates. Everything runs in your browser; nothing you enter is stored or sent.">
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="UK Finance Tools — farhan.app">
+  <meta name="twitter:description" content="Free UK income tax, mortgage and pension calculators built on official GOV.UK rates. Built by Farhan — farhan.app">
   <meta name="twitter:image" content="https://finance.farhan.app/assets/og.png">
   <meta name="twitter:image:alt" content="UK Finance Tools: income tax, mortgage and pension calculators">
   <script type="application/ld+json">{"@context": "https://schema.org", "@type": "WebSite", "name": "UK Finance Tools", "url": "https://finance.farhan.app", "description": "Free UK income tax, mortgage and pension calculators built on official GOV.UK rates.", "inLanguage": "en-GB", "author": {"@type": "Person", "name": "Farhan", "url": "https://farhan.app"}}</script>
   <link rel="preload" href="/assets/fonts/geist-variable.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="/assets/css/style.css?v=602b3fa634">
-  <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/assets/css/style.css?v=bf9010c005">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2064%2064'%3E%3Crect%20width='64'%20height='64'%20rx='14'%20fill='%2318181b'/%3E%3Ctext%20x='32'%20y='44'%20font-family='-apple-system,Segoe%20UI,Arial,sans-serif'%20font-size='36'%20font-weight='700'%20fill='%23fafafa'%20text-anchor='middle'%3E%C2%A3%3C/text%3E%3C/svg%3E" type="image/svg+xml">
   <script defer src="https://mochi.farhan.app/script.js" data-website-id="f43f5c82-286b-40d3-9101-30af20fb7742" data-exclude-search="true"></script>
 </head>
 <body>
@@ -84,17 +84,17 @@
 
   <footer class="site-footer">
     <div class="inner">
-      <p class="footer-note">Figures are based on published GOV.UK rates and are for guidance only, not financial advice. Check your own position with HMRC or a qualified adviser.</p>
-      <nav class="footer-bar" aria-label="Footer">
-        <a href="/income/">Income tax</a>
-        <span class="footer-sep" aria-hidden="true"></span>
-        <a href="/mortgage/">Mortgage</a>
-        <span class="footer-sep" aria-hidden="true"></span>
-        <a href="/pension/">Pension</a>
-        <span class="footer-spacer"></span>
+      <p class="footer-bar">
+        <button type="button" class="footer-link" data-about="about">About</button>
+        <button type="button" class="footer-link" data-about="privacy">Privacy</button>
+        <a href="https://github.com/farhanmunim/finance" target="_blank" rel="noopener">Source<span class="visually-hidden"> (opens in a new tab)</span></a>
+        <span>Runs entirely in your browser</span>
+        <span id="rates-updated" hidden></span>
+        <span>Not financial advice</span>
         <span class="footer-built">Built by <a href="https://farhan.app" target="_blank" rel="noopener">Farhan<span class="visually-hidden"> (opens in a new tab)</span></a></span>
-      </nav>
+      </p>
     </div>
   </footer>
+  <script type="module" src="/assets/js/site.js?v=2e1b2d75d1"></script>
 </body>
 </html>

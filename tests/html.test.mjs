@@ -2,7 +2,7 @@
 // pages are static HTML, so the things that matter to crawlers and assistive tech are in the source.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync, existsSync } from 'node:fs';
+import { readFileSync, existsSync, readdirSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 const root = resolve(new URL('..', import.meta.url).pathname);
@@ -117,12 +117,12 @@ for (const [file, path] of Object.entries(pages)) {
     assert.equal(meta(html, /<meta name="twitter:image" content="([^"]+)"/), 'https://finance.farhan.app/assets/og.png');
     assert.equal(meta(html, /<meta property="og:image:width" content="([^"]+)"/), '1200');
     assert.equal(meta(html, /<meta property="og:image:height" content="([^"]+)"/), '630');
-    assert.equal(meta(html, /<meta name="twitter:card" content="([^"]+)"/), 'summary_large_image');
+    assert.equal(meta(html, /<meta name="twitter:card" content="([^"]+)"/), 'summary');
     assert.equal(meta(html, /<meta name="twitter:title" content="([^"]+)"/), title);
     assert.ok(meta(html, /<meta property="og:description" content="([^"]+)"/), 'og:description');
     assert.ok(meta(html, /<meta name="twitter:description" content="([^"]+)"/), 'twitter:description');
     assert.match(html, /<meta name="theme-color" content="#[0-9a-f]{6}">/);
-    assert.match(html, /<link rel="icon" href="\/assets\/favicon\.svg" type="image\/svg\+xml">/);
+    assert.match(html, /<link rel="icon" href="data:image\/svg\+xml,[^"]+" type="image\/svg\+xml">/, 'inline SVG favicon');
     if (path !== null) assert.equal(meta(html, /<meta property="og:url" content="([^"]+)"/), `https://finance.farhan.app${path}`);
     else assert.doesNotMatch(html, /og:url/, 'the 404 page has no real URL to share');
     assert.ok(desc.length > 0);
@@ -182,4 +182,54 @@ test('robots.txt allows crawling and points at the sitemap; sitemap dates are va
   assert.match(robots, /Allow: \//); assert.doesNotMatch(robots, /Disallow: \/\s*$/m);
   assert.match(robots, /Sitemap: https:\/\/finance\.farhan\.app\/sitemap\.xml/);
   for (const m of read('sitemap.xml').matchAll(/<lastmod>([^<]+)<\/lastmod>/g)) assert.ok(!Number.isNaN(Date.parse(m[1])) && /^\d{4}-\d{2}-\d{2}$/.test(m[1]), `bad lastmod ${m[1]}`);
+});
+
+// ---- farhan.app branding: title, meta and the one-line footer, identical on every page
+
+const SUFFIX = ' — farhan.app';
+const footerOf = (html) => attr(html, /<footer class="site-footer">(.*?)<\/footer>/s);
+
+for (const file of Object.keys(pages)) {
+  test(`${file}: farhan.app title, author and description`, () => {
+    const html = read(file);
+    const title = meta(html, /<title>([^<]+)<\/title>/);
+    assert.ok(title.endsWith(SUFFIX) && title.length > SUFFIX.length, `title "${title}" must end with "${SUFFIX}"`);
+    assert.equal(meta(html, /<meta name="author" content="([^"]+)"/), 'farhan.app');
+    const desc = meta(html, /<meta name="description" content="([^"]+)"/);
+    assert.ok(desc.endsWith('. Built by Farhan — farhan.app'), 'description ends with the Built by line');
+    assert.equal(meta(html, /<meta name="twitter:description" content="([^"]+)"/), desc, 'twitter:description matches the description');
+    assert.equal(meta(html, /<meta property="og:title" content="([^"]+)"/), title);
+  });
+
+  test(`${file}: footer has the one quiet line in order, and loads the About modal script`, () => {
+    const html = read(file);
+    const f = footerOf(html);
+    assert.ok(f, 'footer present');
+    const order = ['data-about="about">About<', 'data-about="privacy">Privacy<', 'href="https://github.com/farhanmunim/finance"', 'Runs entirely in your browser', 'Built by <a href="https://farhan.app"'];
+    let at = -1;
+    for (const needle of order) { const i = f.indexOf(needle); assert.ok(i > at, `footer item out of order or missing: ${needle}`); at = i; }
+    assert.match(f, /<button type="button" class="footer-link" data-about="about">/, 'About is a button, not a link');
+    assert.match(f, /<button type="button" class="footer-link" data-about="privacy">/, 'Privacy is a button, not a link');
+    assert.match(html, /<script type="module" src="\/assets\/js\/site\.js\?v=[0-9a-f]+"><\/script>/);
+  });
+}
+
+test('the footer is identical on every page', () => {
+  const footers = Object.keys(pages).map((f) => footerOf(read(f)));
+  for (const f of footers) assert.equal(f, footers[0]);
+});
+
+test('the About modal covers every required section, in order, and describes analytics truthfully', () => {
+  const js = read('assets/js/site.js');
+  const headings = ['`About ${APP}`', "'Privacy'", "'Source'", "'Developer'", "'Support'"];
+  let at = -1;
+  for (const h of headings) { const i = js.indexOf(h); assert.ok(i > at, `modal section missing or out of order: ${h}`); at = i; }
+  assert.match(js, /showModal\(\)/, 'native modal dialog (focus trap, Esc)');
+  assert.match(js, /e\.target === d/, 'backdrop click closes it');
+  assert.match(js, /opener\.focus\(\)/, 'focus returns to the trigger');
+  assert.match(js, /aggregate, cookieless page-view statistics only/);
+  assert.match(js, /https:\/\/buymeacoffee\.com\/farhan\.app/);
+  assert.match(js, /Farhan Munim/);
+  // the privacy statement must stay true
+  for (const f of readdirSync(resolve(root, 'assets/js'))) assert.doesNotMatch(read(`assets/js/${f}`), /localStorage|sessionStorage|document\.cookie|indexedDB/, `${f} stores data in the browser`);
 });

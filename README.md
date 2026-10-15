@@ -101,3 +101,7 @@ tests/                   node:test suites
 ## Disclaimer
 
 These tools are for guidance only and are not financial or tax advice. Always check your own position with HMRC or a qualified adviser.
+
+## Licence
+
+MIT, see `LICENSE`.
