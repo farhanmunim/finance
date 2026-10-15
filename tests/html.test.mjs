@@ -2,7 +2,7 @@
 // pages are static HTML, so the things that matter to crawlers and assistive tech are in the source.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { readFileSync, existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 const root = resolve(new URL('..', import.meta.url).pathname);
@@ -92,4 +92,94 @@ for (const file of ['income/index.html', 'mortgage/index.html', 'pension/index.h
 test('sitemap lists every indexable page', () => {
   const sm = read('sitemap.xml');
   for (const p of ['/', '/income/', '/mortgage/', '/pension/']) assert.ok(sm.includes(`<loc>https://finance.farhan.app${p}</loc>`), p);
+});
+
+// ---- Baseline SEO, social and accessibility standards, checked across every page together
+
+const indexable = Object.entries(pages).filter(([, path]) => path !== null);
+const meta = (html, re) => attr(html, re);
+
+test('titles and descriptions are unique across pages', () => {
+  const titles = Object.keys(pages).map((f) => meta(read(f), /<title>([^<]+)<\/title>/));
+  const descs = Object.keys(pages).map((f) => meta(read(f), /<meta name="description" content="([^"]+)"/));
+  assert.equal(new Set(titles).size, titles.length, 'duplicate titles');
+  assert.equal(new Set(descs).size, descs.length, 'duplicate descriptions');
+});
+
+for (const [file, path] of Object.entries(pages)) {
+  test(`${file}: social cards are complete and use absolute HTTPS URLs`, () => {
+    const html = read(file);
+    const title = meta(html, /<title>([^<]+)<\/title>/);
+    const desc = meta(html, /<meta name="description" content="([^"]+)"/);
+    assert.equal(meta(html, /<meta property="og:site_name" content="([^"]+)"/), 'UK Finance Tools');
+    assert.equal(meta(html, /<meta property="og:type" content="([^"]+)"/), 'website');
+    assert.equal(meta(html, /<meta property="og:image" content="([^"]+)"/), 'https://finance.farhan.app/assets/og.png');
+    assert.equal(meta(html, /<meta name="twitter:image" content="([^"]+)"/), 'https://finance.farhan.app/assets/og.png');
+    assert.equal(meta(html, /<meta property="og:image:width" content="([^"]+)"/), '1200');
+    assert.equal(meta(html, /<meta property="og:image:height" content="([^"]+)"/), '630');
+    assert.equal(meta(html, /<meta name="twitter:card" content="([^"]+)"/), 'summary_large_image');
+    assert.equal(meta(html, /<meta name="twitter:title" content="([^"]+)"/), title);
+    assert.ok(meta(html, /<meta property="og:description" content="([^"]+)"/), 'og:description');
+    assert.ok(meta(html, /<meta name="twitter:description" content="([^"]+)"/), 'twitter:description');
+    assert.match(html, /<meta name="theme-color" content="#[0-9a-f]{6}">/);
+    assert.match(html, /<link rel="icon" href="\/assets\/favicon\.svg" type="image\/svg\+xml">/);
+    if (path !== null) assert.equal(meta(html, /<meta property="og:url" content="([^"]+)"/), `https://finance.farhan.app${path}`);
+    else assert.doesNotMatch(html, /og:url/, 'the 404 page has no real URL to share');
+    assert.ok(desc.length > 0);
+    assert.doesNotMatch(html, /localhost|example\.com|lorem ipsum|127\.0\.0\.1/i, 'no placeholder or development URLs');
+  });
+
+  test(`${file}: native HTML before ARIA`, () => {
+    const html = read(file);
+    assert.doesNotMatch(html, /role="(switch|radiogroup|note|navigation|main|banner|contentinfo)"/, 'a native element already carries this meaning');
+    assert.doesNotMatch(html, /<div[^>]*onclick=|<span[^>]*onclick=/, 'interactive elements must be native');
+    for (const m of html.matchAll(/(<[a-z]+\b[^>]*>\s*)?<svg\b[^>]*>/g)) assert.match(m[0], /aria-hidden="true"|role="img"/, 'svg is decorative (hidden from assistive tech) or labelled');
+  });
+
+  test(`${file}: stylesheet, scripts and preload resolve to real files`, () => {
+    const html = read(file);
+    for (const m of html.matchAll(/(?:src|href)="(\/assets\/[^"?]+)(?:\?[^"]*)?"/g)) assert.ok(existsSync(resolve(root, '.' + m[1])), `missing asset ${m[1]}`);
+  });
+}
+
+test('every internal link points at a page that exists', () => {
+  const known = new Set(Object.values(pages).filter(Boolean));
+  for (const file of Object.keys(pages)) {
+    for (const m of read(file).matchAll(/<a [^>]*href="(\/[^"#?]*)"/g)) assert.ok(known.has(m[1]), `${file} links to unknown page ${m[1]}`);
+  }
+});
+
+test('structured data matches the page it is on', () => {
+  for (const [file, path] of indexable) {
+    const blocks = [...read(file).matchAll(/<script type="application\/ld\+json">(.*?)<\/script>/gs)].map((m) => JSON.parse(m[1]));
+    assert.ok(blocks.length >= 1, `${file} has structured data`);
+    for (const b of blocks) {
+      assert.equal(b['@context'], 'https://schema.org');
+      assert.ok(['WebSite', 'WebApplication', 'BreadcrumbList'].includes(b['@type']), `unexpected type ${b['@type']}`);
+      if (b['@type'] !== 'BreadcrumbList') assert.equal(b.url.replace(/\/$/, ''), `https://finance.farhan.app${path}`.replace(/\/$/, ''));
+      assert.doesNotMatch(JSON.stringify(b), /aggregateRating|review|ratingValue/i, 'no invented ratings or reviews');
+    }
+  }
+});
+
+test('every page has a descriptive h1 and no skipped heading levels in the static HTML', () => {
+  for (const file of Object.keys(pages)) {
+    const levels = [...read(file).matchAll(/<h([1-6])[\s>]/g)].map((m) => Number(m[1]));
+    assert.equal(levels[0], 1, `${file} starts with h1`);
+    levels.forEach((l, i) => { if (i) assert.ok(l - levels[i - 1] <= 1, `${file} skips from h${levels[i - 1]} to h${l}`); });
+  }
+});
+
+test('the social image is a 1200 x 630 PNG', () => {
+  const d = readFileSync(resolve(root, 'assets/og.png'));
+  assert.equal(d.subarray(1, 4).toString(), 'PNG');
+  assert.deepEqual([d.readUInt32BE(16), d.readUInt32BE(20)], [1200, 630]);
+  assert.ok(d.length < 300 * 1024, 'keep the share image small');
+});
+
+test('robots.txt allows crawling and points at the sitemap; sitemap dates are valid', () => {
+  const robots = read('robots.txt');
+  assert.match(robots, /Allow: \//); assert.doesNotMatch(robots, /Disallow: \/\s*$/m);
+  assert.match(robots, /Sitemap: https:\/\/finance\.farhan\.app\/sitemap\.xml/);
+  for (const m of read('sitemap.xml').matchAll(/<lastmod>([^<]+)<\/lastmod>/g)) assert.ok(!Number.isNaN(Date.parse(m[1])) && /^\d{4}-\d{2}-\d{2}$/.test(m[1]), `bad lastmod ${m[1]}`);
 });

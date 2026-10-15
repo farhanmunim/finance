@@ -28,7 +28,7 @@
   <script type="application/ld+json">{"@context": "https://schema.org", "@type": "WebApplication", "name": "UK Mortgage Calculator", "url": "https://finance.farhan.app/mortgage/", "applicationCategory": "FinanceApplication", "operatingSystem": "Any", "browserRequirements": "Requires JavaScript", "offers": {"@type": "Offer", "price": "0", "priceCurrency": "GBP"}, "description": "Work out mortgage repayments, total interest, and what overpaying saves, including buy-to-let tax.", "author": {"@type": "Person", "name": "Farhan", "url": "https://farhan.app"}}</script>
   <script type="application/ld+json">{"@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [{"@type": "ListItem", "position": 1, "name": "UK Finance Tools", "item": "https://finance.farhan.app/"}, {"@type": "ListItem", "position": 2, "name": "Mortgage calculator", "item": "https://finance.farhan.app/mortgage/"}]}</script>
   <link rel="preload" href="/assets/fonts/geist-variable.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="/assets/css/style.css?v=3371e6eea9">
+  <link rel="stylesheet" href="/assets/css/style.css?v=602b3fa634">
   <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
   <script defer src="https://mochi.farhan.app/script.js" data-website-id="f43f5c82-286b-40d3-9101-30af20fb7742" data-exclude-search="true"></script>
 </head>
@@ -50,7 +50,7 @@
     <div id="sr-status" class="visually-hidden" role="status" aria-live="polite" aria-atomic="true"></div>
     <h1 class="page-title">Mortgage calculator</h1>
     <p class="page-intro">See what your mortgage will cost each month and in total, then test what overpaying would save you in interest and time.</p>
-    <div class="privacy-note" role="note">
+    <div class="privacy-note">
       <span class="privacy-icon"><svg aria-hidden="true" focusable="false" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span>
       <p><b>Private by design.</b> Everything you type stays on your device: the maths runs in your browser and nothing you enter is saved or sent to a server.</p>
     </div>
@@ -69,12 +69,12 @@
                 <label for="deposit">Deposit</label>
                 <div class="input-wrap">
                   <span class="affix" id="depAffix">£</span>
-                  <input id="deposit" name="dep" inputmode="decimal" placeholder="e.g. 30,000">
+                  <input id="deposit" name="dep" inputmode="decimal" placeholder="e.g. 30,000" aria-describedby="loan-note">
                 </div>
-                <div class="segmented mini" style="margin-top:8px" role="radiogroup" aria-label="Deposit entered as">
+                <fieldset class="segmented mini" style="margin-top:8px"><legend class="visually-hidden">Deposit entered as</legend>
                   <input type="radio" name="dt" id="dt-amount" value="amount" checked><label for="dt-amount">£ amount</label>
                   <input type="radio" name="dt" id="dt-percent" value="percent"><label for="dt-percent">% of value</label>
-                </div>
+                </fieldset>
               </div>
             </div>
             <div class="note-box" id="loan-note">Enter a property value and deposit to see your loan amount.</div>
@@ -114,7 +114,7 @@
             </details>
             <label class="toggle" id="own-payment-toggle">
               <span><span class="label">I know my monthly payment</span><span class="sub">Enter it and we'll work out how long the loan takes to clear</span></span>
-              <input type="checkbox" id="ownPayment" name="op" value="1" role="switch"><span class="switch"></span>
+              <input type="checkbox" id="ownPayment" name="op" value="1"><span class="switch"></span>
             </label>
             <div class="field" id="payment-field" hidden>
               <label for="payment">Monthly payment</label>
@@ -236,11 +236,11 @@
     </section>
   </main>
 
-  <div class="mobile-summary" id="mobile-summary" hidden>
+  <aside class="mobile-summary" id="mobile-summary" aria-label="Results summary" hidden>
     <div><div class="k">Monthly payment</div><div class="v" id="ms-pay">£0</div></div>
     <div style="text-align:right"><div class="k">Total interest</div><div class="v" id="ms-int">£0</div></div>
     <a href="#results">Details ↓</a>
-  </div>
+  </aside>
 
   <footer class="site-footer">
     <div class="inner">
@@ -256,6 +256,6 @@
       </nav>
     </div>
   </footer>
-  <script type="module" src="/assets/js/mortgage.js?v=49fa777316"></script>
+  <script type="module" src="/assets/js/mortgage.js?v=e7e67f4912"></script>
 </body>
 </html>

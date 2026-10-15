@@ -124,6 +124,12 @@ export function captionTables(root) {
     const h = t.closest('section')?.querySelector('h2, h3');
     if (h) t.prepend(el('caption', { class: 'visually-hidden', text: h.textContent }));
   }
+  // A table that scrolls sideways on a narrow screen must be reachable by keyboard, and named.
+  for (const box of root.querySelectorAll('.table-scroll')) {
+    const overflows = box.scrollWidth > box.clientWidth + 1;
+    const name = box.closest('section')?.querySelector('h2, h3')?.textContent;
+    if (overflows && name) { box.tabIndex = 0; box.setAttribute('role', 'region'); box.setAttribute('aria-label', `${name} (scrollable table)`); }
+  }
 }
 
 /** Link a new-tab anchor and tell assistive tech that it opens a new tab. */

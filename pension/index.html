@@ -28,7 +28,7 @@
   <script type="application/ld+json">{"@context": "https://schema.org", "@type": "WebApplication", "name": "UK Pension Calculator", "url": "https://finance.farhan.app/pension/", "applicationCategory": "FinanceApplication", "operatingSystem": "Any", "browserRequirements": "Requires JavaScript", "offers": {"@type": "Offer", "price": "0", "priceCurrency": "GBP"}, "description": "Project your pension pot and retirement income, including State Pension, tax relief and income tax.", "author": {"@type": "Person", "name": "Farhan", "url": "https://farhan.app"}}</script>
   <script type="application/ld+json">{"@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [{"@type": "ListItem", "position": 1, "name": "UK Finance Tools", "item": "https://finance.farhan.app/"}, {"@type": "ListItem", "position": 2, "name": "Pension calculator", "item": "https://finance.farhan.app/pension/"}]}</script>
   <link rel="preload" href="/assets/fonts/geist-variable.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="/assets/css/style.css?v=3371e6eea9">
+  <link rel="stylesheet" href="/assets/css/style.css?v=602b3fa634">
   <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
   <script defer src="https://mochi.farhan.app/script.js" data-website-id="f43f5c82-286b-40d3-9101-30af20fb7742" data-exclude-search="true"></script>
 </head>
@@ -50,7 +50,7 @@
     <div id="sr-status" class="visually-hidden" role="status" aria-live="polite" aria-atomic="true"></div>
     <h1 class="page-title">Pension calculator</h1>
     <p class="page-intro">See how big your pension pot could grow, what it could pay you each month once you retire, and how much more to pay in if you want a higher income.</p>
-    <div class="privacy-note" role="note">
+    <div class="privacy-note">
       <span class="privacy-icon"><svg aria-hidden="true" focusable="false" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span>
       <p><b>Private by design.</b> Everything you type stays on your device: the maths runs in your browser and nothing you enter is saved or sent to a server.</p>
     </div>
@@ -67,7 +67,7 @@
               </div>
               <div class="field">
                 <label for="retireAge">Retire at</label>
-                <div class="input-wrap"><input id="retireAge" name="ra" type="number" min="40" max="80" step="1" placeholder="e.g. 67"><span class="affix suffix">years</span></div>
+                <div class="input-wrap"><input id="retireAge" name="ra" type="number" min="40" max="80" step="1" placeholder="e.g. 67" aria-describedby="age-note"><span class="affix suffix">years</span></div>
               </div>
             </div>
             <div class="note-box" id="age-note" hidden></div>
@@ -85,7 +85,7 @@
             </fieldset>
             <label class="toggle">
               <span><span class="label">Show results in today's money</span><span class="sub">Adjusts for inflation so figures mean what they would buy now</span></span>
-              <input type="checkbox" id="real" name="rl" value="1" role="switch" checked><span class="switch"></span>
+              <input type="checkbox" id="real" name="rl" value="1" checked><span class="switch"></span>
             </label>
           </div>
         </div>
@@ -110,10 +110,10 @@
                   <option value="yearly">a year</option>
                 </select>
               </div>
-              <div class="segmented mini" style="margin-top:8px" role="radiogroup" aria-label="Contribution entered as">
+              <fieldset class="segmented mini" style="margin-top:8px"><legend class="visually-hidden">Contribution entered as</legend>
                 <input type="radio" name="ct" id="ct-amount" value="amount" checked><label for="ct-amount">£ amount</label>
                 <input type="radio" name="ct" id="ct-percent" value="percent"><label for="ct-percent">% of salary</label>
-              </div>
+              </fieldset>
               <span class="hint" id="contrib-hint">Include tax relief the provider adds, so this is the total that goes into your pot.</span>
             </div>
             <div class="field">
@@ -169,7 +169,7 @@
           <div class="body stack">
             <label class="toggle">
               <span><span class="label">Include the State Pension</span><span class="sub">The new State Pension, paid by the government</span></span>
-              <input type="checkbox" id="includeSP" name="sp" value="1" role="switch" checked><span class="switch"></span>
+              <input type="checkbox" id="includeSP" name="sp" value="1" checked><span class="switch"></span>
             </label>
             <div class="row">
               <div class="field">
@@ -210,7 +210,7 @@
               </div>
               <label class="toggle">
                 <span><span class="label">Rises with inflation</span><span class="sub">Pays less to start with, but keeps its buying power</span></span>
-                <input type="checkbox" id="annRises" name="ai" value="1" role="switch"><span class="switch"></span>
+                <input type="checkbox" id="annRises" name="ai" value="1"><span class="switch"></span>
               </label>
             </div>
             <fieldset class="field">
@@ -274,7 +274,7 @@
             </div>
             <label class="toggle">
               <span><span class="label">Raise my £ payments with pay</span><span class="sub">Otherwise a fixed £ amount stays the same each year</span></span>
-              <input type="checkbox" id="escalate" name="es" value="1" role="switch"><span class="switch"></span>
+              <input type="checkbox" id="escalate" name="es" value="1"><span class="switch"></span>
             </label>
           </div>
         </details>
@@ -304,11 +304,11 @@
     </section>
   </main>
 
-  <div class="mobile-summary" id="mobile-summary" hidden>
+  <aside class="mobile-summary" id="mobile-summary" aria-label="Results summary" hidden>
     <div><div class="k">Monthly income</div><div class="v" id="ms-inc">£0</div></div>
     <div style="text-align:right"><div class="k">Pot at retirement</div><div class="v" id="ms-pot">£0</div></div>
     <a href="#results">Details ↓</a>
-  </div>
+  </aside>
 
   <footer class="site-footer">
     <div class="inner">
@@ -324,6 +324,6 @@
       </nav>
     </div>
   </footer>
-  <script type="module" src="/assets/js/pension.js?v=4e22bea4be"></script>
+  <script type="module" src="/assets/js/pension.js?v=be803c8a22"></script>
 </body>
 </html>

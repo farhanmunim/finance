@@ -1,4 +1,4 @@
-import { fmt, el } from './ui.js?v=60c2d4f53d';
+import { fmt, el } from './ui.js?v=bdf638f516';
 
 /**
  * Accessible SVG line chart shared by the tools: hover or touch tooltip, keyboard arrows to read each
