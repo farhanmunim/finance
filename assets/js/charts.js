@@ -32,24 +32,27 @@ export function lineChart(series, { width, title = 'Line chart of outstanding mo
   // grid + y labels
   for (let i = 0; i <= ySteps; i++) {
     const v = niceMin + (span / ySteps) * i, y = sy(v);
-    add('line', { x1: m.left, x2: W - m.right, y1: y, y2: y, stroke: '#e5e7eb', 'stroke-width': 1 });
-    const t = add('text', { x: m.left - 8, y: y + 4, 'text-anchor': 'end', 'font-size': 12, fill: '#6b7280' });
+    add('line', { x1: m.left, x2: W - m.right, y1: y, y2: y, stroke: '#ececef', 'stroke-width': 1 });
+    const t = add('text', { x: m.left - 8, y: y + 4, 'text-anchor': 'end', 'font-size': 11.5, fill: '#76767b' });
     t.textContent = compactGbp(v);
   }
   // x labels
   const xStep = W < 480 ? (xMax <= 6 ? 1 : xMax <= 12 ? 2 : 5) : (xMax <= 10 ? 1 : xMax <= 20 ? 2 : 5);
   for (let x = 0; x <= xMax; x += xStep) {
-    const t = add('text', { x: sx(x), y: H - m.bottom + 18, 'text-anchor': 'middle', 'font-size': 12, fill: '#6b7280' });
+    const t = add('text', { x: sx(x), y: H - m.bottom + 18, 'text-anchor': 'middle', 'font-size': 11.5, fill: '#76767b' });
     t.textContent = xLabel(x);
   }
-  add('line', { x1: m.left, x2: W - m.right, y1: sy(0), y2: sy(0), stroke: '#9ca3af', 'stroke-width': 1 });
+  add('line', { x1: m.left, x2: W - m.right, y1: sy(0), y2: sy(0), stroke: '#c4c4c9', 'stroke-width': 1 });
 
   for (const s of series) {
     const d = s.data.map((p, i) => `${i ? 'L' : 'M'}${sx(p.x).toFixed(1)},${sy(p.y).toFixed(1)}`).join(' ');
+    // Soft fill down to the zero line under each series, as a quiet echo of the line
+    const base = sy(Math.max(niceMin, 0)).toFixed(1);
+    add('path', { d: `${d} L${sx(s.data[s.data.length - 1].x).toFixed(1)},${base} L${sx(s.data[0].x).toFixed(1)},${base} Z`, fill: s.color, opacity: series.length > 1 ? 0.05 : 0.08, stroke: 'none' });
     add('path', { d, fill: 'none', stroke: s.color, 'stroke-width': 2, 'stroke-linejoin': 'round', 'stroke-linecap': 'round' });
   }
   // hover layer
-  const cross = add('line', { x1: 0, x2: 0, y1: m.top, y2: m.top + ih, stroke: '#9ca3af', 'stroke-width': 1, 'stroke-dasharray': '3 3', opacity: 0 });
+  const cross = add('line', { x1: 0, x2: 0, y1: m.top, y2: m.top + ih, stroke: '#c4c4c9', 'stroke-width': 1, 'stroke-dasharray': '3 3', opacity: 0 });
   const dots = series.map((s) => add('circle', { r: 4.5, fill: s.color, stroke: '#fff', 'stroke-width': 2, opacity: 0 }));
   const wrap = el('div', { class: 'chart-wrap' });
   const tip = el('div', { class: 'chart-tip', 'aria-hidden': 'true' });

@@ -1,13 +1,13 @@
 import { analyse, whatIf, quoteApr, defaultPaymentCount } from './car-engine.js?v=6e481b69cf';
-import { lineChart as drawLineChart } from './charts.js?v=4df7c0dce0';
+import { lineChart as drawLineChart } from './charts.js?v=0dcc5039c5';
 import { fmt, parseNum, initMoneyInputs, initNumberInputs, captionTables, $, $$, el, linesTable, urlState, debounce, announce, linkHints } from './ui.js?v=bdf638f516';
 
 const form = $('#form');
 const results = $('#results');
-const C_CAR = '#2a78d6';
-const C_INTEREST = '#eb6834';
+const C_CAR = '#1f7bff';
+const C_INTEREST = '#f08a24';
 const C_FEES = '#7c5cd6';
-const C_DEPOSIT = '#1baf7a';
+const C_DEPOSIT = '#17a34a';
 const C_FINAL = '#7c5cd6';
 const KEYS = ['p', 'd', 't', 'm', 'b', 'n', 'f1', 'f2'];
 const TYPE_HINT = {

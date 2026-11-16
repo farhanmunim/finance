@@ -75,3 +75,17 @@ document.addEventListener('click', (e) => {
     slot.hidden = false;
   } catch { /* the footer simply omits the date */ }
 })();
+
+// Landing page preview: buttons switch between example results
+for (const group of document.querySelectorAll('[data-preview]')) {
+  const buttons = [...group.querySelectorAll('button[aria-controls]')];
+  group.addEventListener('click', (e) => {
+    const btn = e.target.closest('button[aria-controls]');
+    if (!btn) return;
+    for (const b of buttons) {
+      const on = b === btn;
+      b.setAttribute('aria-pressed', String(on));
+      document.getElementById(b.getAttribute('aria-controls')).hidden = !on;
+    }
+  });
+}

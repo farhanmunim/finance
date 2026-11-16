@@ -83,7 +83,7 @@ Implemented in `assets/js/car-engine.js`. Monthly payments fall at the end of mo
 
 ## Design
 
-The look is benchmarked on app-blueprint.farhan.app: a shadcn-style neutral palette (near-black primary, zinc greys, 1px borders, 6–8px radii, subtle shadows), Geist type (self-hosted in `assets/fonts/`, so no third-party font requests), compact 40px controls, uppercase 11px section labels, a dotted canvas background and a slim footer. Tokens live at the top of `assets/css/style.css` as HSL triplets, so a dark theme can be added by redefining them.
+The look is benchmarked on farhan.app: Inter Tight display headings (large, tightly tracked, with a grey second line) over Inter body text, a #fcfcfc canvas, zinc greys, one blue accent (#1f7bff) for focus, links and chart series, white cards with soft shadows, grey-framed nested cards for the landing page tools and FAQs, pill segmented controls, a dark "how it works" band and a large fading wordmark in the footer. Both fonts are self-hosted in `assets/fonts/` (SIL Open Font Licence), so there are no third-party font requests. Tokens live at the top of `assets/css/style.css`; on desktop the inputs column stays in view while the results scroll.
 
 ## Project layout
 

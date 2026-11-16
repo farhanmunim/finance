@@ -1,12 +1,12 @@
 import { amortise, compare, overpayVsSave, breakEvenSavingsRate, rateSensitivity, ltvBands } from './mortgage-engine.js?v=61f5bba74e';
 import { propertyIncrementalTax } from './tax-engine.js?v=fdea76ad1f';
-import { lineChart as drawLineChart } from './charts.js?v=4df7c0dce0';
+import { lineChart as drawLineChart } from './charts.js?v=0dcc5039c5';
 import { fmt, parseNum, initMoneyInputs, initNumberInputs, captionTables, $, $$, el, linesTable, urlState, debounce, loadJSON, announce, linkHints } from './ui.js?v=bdf638f516';
 
 const form = $('#form');
 const results = $('#results');
-const COLOR_BASE = '#2a78d6';
-const COLOR_OVER = '#eb6834';
+const COLOR_BASE = '#1f7bff';
+const COLOR_OVER = '#f08a24';
 const state = { rates: null, ratesLabel: '' };
 const lineChart = (series, opts) => drawLineChart(series, { width: results.clientWidth, ...opts });
 
