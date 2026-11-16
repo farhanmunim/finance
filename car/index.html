@@ -83,6 +83,14 @@
         <div class="card">
           <div class="card-header"><div><h2>The finance</h2><p>Copy these from the quote.</p></div></div>
           <div class="stack">
+            <fieldset class="field">
+              <legend class="label">Type of finance</legend>
+              <div class="segmented block">
+                <input type="radio" name="type" id="type-pcp" value="pcp" checked><label for="type-pcp">PCP</label>
+                <input type="radio" name="type" id="type-hp" value="hp"><label for="type-hp">Hire purchase (HP)</label>
+              </div>
+              <span class="hint" id="type-hint">Lower monthly payments with a large optional final payment at the end. Pay it to keep the car, or hand the car back.</span>
+            </fieldset>
             <div class="row">
               <div class="field">
                 <label for="term">Finance term</label>
@@ -94,10 +102,10 @@
                 <div class="input-wrap"><span class="affix">£</span><input id="monthly" name="m" data-money="2" placeholder="e.g. 378.12"></div>
               </div>
             </div>
-            <div class="field">
+            <div class="field" id="balloon-field">
               <label for="balloon">Final (balloon) payment</label>
-              <div class="input-wrap"><span class="affix">£</span><input id="balloon" name="b" data-money="2" placeholder="Leave blank for hire purchase"></div>
-              <span class="hint">On a PCP this is the "optional final payment" you pay to keep the car. Hire purchase usually has none.</span>
+              <div class="input-wrap"><span class="affix">£</span><input id="balloon" name="b" data-money="2" placeholder="e.g. 12,879.26"></div>
+              <span class="hint">The "optional final payment" (sometimes called the GMFV) on the quote.</span>
             </div>
             <div class="note-box" id="schedule-note">Enter the term and monthly payment to see your payment plan.</div>
             <details class="explain options" id="more">
@@ -117,7 +125,7 @@
                   <div class="field">
                     <label for="feeEnd">Option to purchase fee</label>
                     <div class="input-wrap"><span class="affix">£</span><input id="feeEnd" name="f2" data-money="2" placeholder="0"></div>
-                    <span class="hint">Paid with the final payment.</span>
+                    <span class="hint">Often £1 to £10, paid with the last payment.</span>
                   </div>
                 </div>
               </div>
@@ -169,7 +177,7 @@
       </p>
     </div>
   </footer>
-  <script type="module" src="/assets/js/car.js?v=ec872c5044"></script>
+  <script type="module" src="/assets/js/car.js?v=ddcb011a40"></script>
   <script type="module" src="/assets/js/site.js?v=04aca99d83"></script>
 </body>
 </html>

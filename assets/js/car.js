@@ -10,7 +10,14 @@ const C_FEES = '#7c5cd6';
 const C_DEPOSIT = '#1baf7a';
 const C_FINAL = '#7c5cd6';
 const KEYS = ['p', 'd', 't', 'm', 'b', 'n', 'f1', 'f2'];
-const EXAMPLE = { p: '26,500.00', d: '5,000.00', t: '48', m: '378.12', b: '12,879.26', n: '', f1: '', f2: '' };
+const TYPE_HINT = {
+  pcp: 'Lower monthly payments with a large optional final payment at the end. Pay it to keep the car, or hand the car back.',
+  hp: 'Higher monthly payments that repay the whole car. It is yours after the last payment, with no final lump sum.',
+};
+const EXAMPLES = {
+  pcp: { p: '26,500.00', d: '5,000.00', t: '48', m: '378.12', b: '12,879.26', n: '', f1: '', f2: '' },
+  hp: { p: '26,500.00', d: '3,975.00', t: '48', m: '605.23', b: '', n: '', f1: '', f2: '1.00' },
+};
 const lineChart = (series, opts) => drawLineChart(series, { width: results.clientWidth, ...opts });
 
 const gbp2 = (v) => fmt.gbp(v, 2);
@@ -26,7 +33,9 @@ function init() {
   form.addEventListener('input', debounce(render, 80));
   form.addEventListener('submit', (e) => e.preventDefault());
   $('#example').addEventListener('click', () => {
-    for (const k of KEYS) form[k].value = EXAMPLE[k];
+    const ex = EXAMPLES[form.type.value];
+    for (const k of KEYS) form[k].value = ex[k];
+    if (ex.f2) $('#more').open = true;
     render();
     $('#price').focus();
   });
@@ -38,18 +47,22 @@ function init() {
 function restoreFromUrl() {
   const q = urlState.read();
   for (const k of KEYS) if (q[k] != null && form[k]) form[k].value = q[k];
+  if (q.type === 'hp' || q.type === 'pcp') $(`#type-${q.type}`).checked = true;
   if (q.n || q.f1 || q.f2) $('#more').open = true;
 }
 
 function readForm() {
-  const raw = Object.fromEntries(KEYS.map((k) => [k, form[k].value]));
+  const type = form.type.value === 'hp' ? 'hp' : 'pcp';
+  const raw = { type, ...Object.fromEntries(KEYS.map((k) => [k, form[k].value])) };
+  if (type === 'hp') raw.b = '';
   return {
     raw,
+    type,
     price: parseNum(raw.p),
     deposit: parseNum(raw.d),
     termMonths: Math.round(parseNum(raw.t)),
     monthlyPayment: parseNum(raw.m),
-    finalPayment: parseNum(raw.b),
+    finalPayment: type === 'hp' ? 0 : parseNum(raw.b),
     paymentCount: Math.round(parseNum(raw.n)),
     upfrontFee: parseNum(raw.f1),
     finalFee: parseNum(raw.f2),
@@ -58,6 +71,8 @@ function readForm() {
 
 /** Live notes under the inputs, so the user can see how their figures were read. */
 function updateNotes(o) {
+  $('#balloon-field').hidden = o.type === 'hp';
+  $('#type-hint').textContent = TYPE_HINT[o.type];
   const credit = o.price - o.deposit;
   const cn = $('#credit-note');
   if (o.price > 0 && credit <= 0) cn.innerHTML = '<span style="color:var(--warn)">The deposit covers the whole price, so there is nothing to borrow.</span>';
@@ -96,7 +111,7 @@ function render() {
     results.append(el('section', { class: 'card note-box warn' }, r.warnings.map((w) => el('p', { text: w }))));
     return;
   }
-  results.append(heroCard(r));
+  results.append(heroCard(r, o));
   results.append(breakdownCard(r));
   results.append(timelineCard(r));
   results.append(whatIfCard(r));
@@ -128,9 +143,9 @@ function splitBar(parts) {
 }
 
 // ------------------------------------------------------------------ headline
-function heroCard(r) {
+function heroCard(r, o) {
   const card = el('section', { class: 'card' });
-  const kind = r.balloon > 0 ? 'PCP' : 'hire purchase';
+  const kind = o.type === 'hp' ? 'hire purchase' : 'PCP';
   card.append(header('What this finance costs', `${gbp2(r.credit)} borrowed over ${r.term} months · ${kind}`));
   const zero = Math.abs(r.interest) < 0.5;
   card.append(el('div', { class: 'hero' }, [
@@ -148,7 +163,9 @@ function heroCard(r) {
     el('h3', { text: 'Where your money goes', style: 'margin-bottom:8px' }),
     splitBar([['Car', r.price, C_CAR], ['Interest', r.interest, C_INTEREST], ['Fees', r.fees, C_FEES]]),
   ]));
-  if (r.warnings.length) card.append(el('div', { class: 'note-box warn', style: 'margin-top:14px' }, r.warnings.map((w) => el('p', { text: w }))));
+  const warnings = [...r.warnings];
+  if (o.type === 'pcp' && !(r.balloon > 0)) warnings.push('No final payment entered, so this is worked out like hire purchase. Add the optional final payment from the quote, or switch to HP.');
+  if (warnings.length) card.append(el('div', { class: 'note-box warn', style: 'margin-top:14px' }, warnings.map((w) => el('p', { text: w }))));
   return card;
 }
 
