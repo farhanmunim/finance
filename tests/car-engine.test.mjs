@@ -83,3 +83,13 @@ test('rate solver handles a plain annuity', () => {
   const flows = Array.from({ length: 12 }, (_, k) => [k + 1, 888.4879]);
   close(solveMonthlyRate(10000, flows), 0.01, 1e-6);
 });
+
+test('reproduces a real hire purchase quote with a £1 purchase fee', () => {
+  // £26,500 car, £3,975 deposit, 48 x £605.23, £1 purchase fee, 13.9% APR, total amount payable £33,027.04
+  const r = analyse({ price: 26500, deposit: 3975, termMonths: 48, monthlyPayment: 605.23, finalFee: 1 });
+  assert.equal(r.count, 48);
+  assert.equal(r.credit, 22525);
+  assert.equal(r.totalPayable, 33027.04);
+  assert.equal(r.interest, 6526.04);
+  assert.equal(quoteApr(r.apr), 13.9);
+});
