@@ -114,6 +114,10 @@ main p a:hover, main li a:not(.tool-card):hover, .hint a:hover, .sources a:hover
 .tool-layout { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-3); align-items: start; }
 .inputs-col, .results-col { min-width: 0; container-type: inline-size; }
 @media (min-width: 960px) { .tool-layout { grid-template-columns: minmax(20rem, 5fr) minmax(0, 7fr); gap: var(--space-4); } }
+/* Desktop: keep the inputs in view while the results scroll. A column taller than the window scrolls on its own. */
+@media (min-width: 960px) {
+  .inputs-col { position: sticky; top: calc(var(--topbar-h) + var(--space-2)); max-height: calc(100vh - var(--topbar-h) - 2 * var(--space-2)); max-height: calc(100dvh - var(--topbar-h) - 2 * var(--space-2)); overflow-y: auto; scrollbar-width: thin; scrollbar-gutter: stable; padding: 3px 6px 3px 3px; margin: -3px -6px -3px -3px; scroll-padding-block: var(--space-3); }
+}
 
 /* ---------- Privacy banner ---------- */
 .privacy-note { display: flex; align-items: flex-start; gap: 10px; margin-bottom: var(--space-3); padding: var(--sp-4) var(--sp-5); border: 1px solid var(--good-bd); background: var(--good-soft); border-radius: var(--r-lg); color: var(--good); font-size: var(--fs-md); line-height: 1.45; }
