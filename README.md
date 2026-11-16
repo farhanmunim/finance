@@ -1,11 +1,12 @@
 # UK Finance Tools
 
-Three small, fast calculators built with plain HTML, CSS and JavaScript. No frameworks, no build step, no tracking. Designed for Cloudflare Pages (free tier) but any static host works.
+Four small, fast calculators built with plain HTML, CSS and JavaScript. No frameworks, no build step, no tracking. Designed for Cloudflare Pages (free tier) but any static host works.
 
 | Tool | Path | What it does |
 | --- | --- | --- |
 | Income tax | `/income/` | Income tax, National Insurance, student loan and pension deductions for employees, the self-employed, or both, plus property income, Child Benefit and every rate editable, with each step shown. |
 | Mortgage | `/mortgage/` | Monthly payment, total interest, fixed-rate periods, interest-only, overpayments, overpay-vs-save break-even, rate sensitivity, LTV tiers and buy-to-let tax. |
+| Car finance | `/car/` | Paste in a PCP or hire purchase quote (price, deposit, term, monthly and final payment, optional fees) and see the total interest, interest a month and a year, the effective APR, monthly and flat rates, the balance over time and what a bigger deposit or lower rate would save. |
 | Pension | `/pension/` | Projected pot, monthly retirement income after tax (drawdown or annuity), State Pension, tax relief, employer contributions, a target income, and what paying in more, retiring earlier or later or lower growth would change. |
 
 ## Deploying to Cloudflare Pages
@@ -76,6 +77,10 @@ Analysis on top of the schedule:
 - **Loan-to-value tiers.** Extra deposit needed to reach 95/90/85/80/75/60% LTV.
 - **Buy-to-let.** The tax on the rent is the difference between the full income-tax calculation with and without the property, given the user's other income and region, so the Personal Allowance, band straddling, the allowance taper, Scottish rates and the finance-cost credit caps are all applied. The property allowance is used instead of costs when that is cheaper. Shows cash after mortgage and tax, gross yield, and the extra tax versus full deductibility.
 
+## Calculation method (car finance tool)
+
+Implemented in `assets/js/car-engine.js`. Monthly payments fall at the end of months 1..n and the final (balloon) payment at the end of the last month of the term; n defaults to term − 1 when there is a final payment (a 48-month PCP is 47 payments plus the final payment) and to the term otherwise, and can be overridden. The monthly rate is the IRR that makes the payments repay the amount of credit, found by bisection; the APR is (1 + monthly rate)^12 − 1, with an arrangement fee (paid with the first payment) and option-to-purchase fee (paid with the final payment) included, as the Total Charge for Credit rules require. Interest = monthly payments + final payment − amount of credit. Verified against a published PCP and HP quote (13.9% APR, £35,650.90 total payable).
+
 ## Design
 
 The look is benchmarked on app-blueprint.farhan.app: a shadcn-style neutral palette (near-black primary, zinc greys, 1px borders, 6–8px radii, subtle shadows), Geist type (self-hosted in `assets/fonts/`, so no third-party font requests), compact 40px controls, uppercase 11px section labels, a dotted canvas background and a slim footer. Tokens live at the top of `assets/css/style.css` as HSL triplets, so a dark theme can be added by redefining them.
@@ -86,9 +91,11 @@ The look is benchmarked on app-blueprint.farhan.app: a shadcn-style neutral pale
 index.html               landing page
 income/index.html        take-home pay calculator
 mortgage/index.html      mortgage calculator
+car/index.html           car finance calculator
 assets/css/style.css     shared design system (light theme)
 assets/js/tax-engine.js  income tax / NI / student loan engine
 assets/js/mortgage-engine.js
+assets/js/car-engine.js  car finance engine (rate solver, APR, schedule)
 assets/js/income.js      income page UI
 assets/js/mortgage.js    mortgage page UI (includes the SVG chart)
 assets/js/ui.js          formatting, money inputs, URL state helpers

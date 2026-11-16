@@ -6,7 +6,7 @@ import { readFileSync, existsSync, readdirSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 const root = resolve(new URL('..', import.meta.url).pathname);
-const pages = { 'index.html': '/', 'income/index.html': '/income/', 'mortgage/index.html': '/mortgage/', 'pension/index.html': '/pension/', '404.html': null };
+const pages = { 'index.html': '/', 'income/index.html': '/income/', 'mortgage/index.html': '/mortgage/', 'pension/index.html': '/pension/', 'car/index.html': '/car/', '404.html': null };
 const read = (f) => readFileSync(resolve(root, f), 'utf8');
 const attr = (html, re) => html.match(re)?.[1];
 
@@ -68,7 +68,7 @@ for (const [file, path] of Object.entries(pages)) {
   });
 }
 
-for (const file of ['income/index.html', 'mortgage/index.html', 'pension/index.html']) {
+for (const file of ['income/index.html', 'mortgage/index.html', 'pension/index.html', 'car/index.html']) {
   test(`${file}: every form control has a label and groups use fieldset/legend`, () => {
     const html = read(file);
     const labelled = new Set([...html.matchAll(/<label [^>]*for="([^"]+)"/g)].map((m) => m[1])); // explicit
@@ -91,7 +91,7 @@ for (const file of ['income/index.html', 'mortgage/index.html', 'pension/index.h
 
 test('sitemap lists every indexable page', () => {
   const sm = read('sitemap.xml');
-  for (const p of ['/', '/income/', '/mortgage/', '/pension/']) assert.ok(sm.includes(`<loc>https://finance.farhan.app${p}</loc>`), p);
+  for (const p of ['/', '/income/', '/mortgage/', '/pension/', '/car/']) assert.ok(sm.includes(`<loc>https://finance.farhan.app${p}</loc>`), p);
 });
 
 // ---- Baseline SEO, social and accessibility standards, checked across every page together

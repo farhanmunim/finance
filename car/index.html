@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Car Finance Calculator (PCP &amp; HP) — farhan.app</title>
+  <meta name="description" content="See the real cost of a PCP or hire purchase quote: total interest, interest a month and a year, and the true APR. Built by Farhan — farhan.app">
+    <link rel="canonical" href="https://finance.farhan.app/car/">
+  <meta name="robots" content="index, follow">
+  <meta name="author" content="farhan.app">
+  <meta name="color-scheme" content="light">
+  <meta name="theme-color" content="#18181b">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="UK Finance Tools">
+  <meta property="og:title" content="Car Finance Calculator (PCP &amp; HP) — farhan.app">
+  <meta property="og:description" content="Enter a car finance quote (price, deposit, term, monthly and final payment) and see the total interest, interest a month and a year, and the effective APR.">
+  <meta property="og:url" content="https://finance.farhan.app/car/">
+  <meta property="og:image" content="https://finance.farhan.app/assets/og.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="UK Finance Tools: income tax, mortgage and pension calculators">
+  <meta property="og:locale" content="en_GB">
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="Car Finance Calculator (PCP &amp; HP) — farhan.app">
+  <meta name="twitter:description" content="See the real cost of a PCP or hire purchase quote: total interest, interest a month and a year, and the true APR. Built by Farhan — farhan.app">
+  <meta name="twitter:image" content="https://finance.farhan.app/assets/og.png">
+  <meta name="twitter:image:alt" content="UK Finance Tools: income tax, mortgage and pension calculators">
+  <script type="application/ld+json">{"@context": "https://schema.org", "@type": "WebApplication", "name": "Car Finance Calculator", "url": "https://finance.farhan.app/car/", "applicationCategory": "FinanceApplication", "operatingSystem": "Any", "browserRequirements": "Requires JavaScript", "offers": {"@type": "Offer", "price": "0", "priceCurrency": "GBP"}, "description": "Work out the total interest, interest a month and a year, and the effective APR of a PCP or hire purchase car finance quote.", "author": {"@type": "Person", "name": "Farhan", "url": "https://farhan.app"}}</script>
+  <script type="application/ld+json">{"@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [{"@type": "ListItem", "position": 1, "name": "UK Finance Tools", "item": "https://finance.farhan.app/"}, {"@type": "ListItem", "position": 2, "name": "Car finance calculator", "item": "https://finance.farhan.app/car/"}]}</script>
+  <link rel="preload" href="/assets/fonts/geist-variable.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="/assets/css/style.css?v=bf9010c005">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2064%2064'%3E%3Crect%20width='64'%20height='64'%20rx='14'%20fill='%2318181b'/%3E%3Ctext%20x='32'%20y='44'%20font-family='-apple-system,Segoe%20UI,Arial,sans-serif'%20font-size='36'%20font-weight='700'%20fill='%23fafafa'%20text-anchor='middle'%3E%C2%A3%3C/text%3E%3C/svg%3E" type="image/svg+xml">
+  <script defer src="https://mochi.farhan.app/script.js" data-website-id="f43f5c82-286b-40d3-9101-30af20fb7742" data-exclude-search="true"></script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to main content</a>
+  <noscript><p class="noscript-note">These calculators run in your browser and need JavaScript turned on.</p></noscript>
+  <header class="site-header">
+    <div class="inner">
+      <a class="brand" href="/" aria-label="UK Finance Tools home"><span class="logo">£</span><span class="brand-text">UK Finance Tools</span></a>
+      <nav class="site-nav" aria-label="Tools">
+        <a href="/income/">Income tax</a>
+        <a href="/mortgage/">Mortgage</a>
+        <a href="/pension/">Pension</a>
+        <a href="/car/" aria-current="page">Car finance</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container" id="main">
+    <div id="sr-status" class="visually-hidden" role="status" aria-live="polite" aria-atomic="true"></div>
+    <h1 class="page-title">Car finance calculator</h1>
+    <p class="page-intro">Copy the numbers from a PCP or hire purchase quote and see what the borrowing really costs: the interest in pounds, a month and a year, and the true APR.</p>
+    <div class="privacy-note">
+      <span class="privacy-icon"><svg aria-hidden="true" focusable="false" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span>
+      <p><b>Private by design.</b> Everything you type stays on your device: the maths runs in your browser and nothing you enter is saved or sent to a server.</p>
+    </div>
+
+    <form id="form" class="tool-layout" autocomplete="off" novalidate aria-label="Calculator inputs">
+      <div class="inputs-col">
+        <div class="card">
+          <div class="card-header">
+            <div><h2>The car</h2><p>The price and what you put down.</p></div>
+            <button type="button" class="btn" id="example">Try an example</button>
+          </div>
+          <div class="stack">
+            <div class="row">
+              <div class="field">
+                <label for="price">Car price</label>
+                <div class="input-wrap"><span class="affix">£</span><input id="price" name="p" data-money="2" placeholder="e.g. 26,500"></div>
+                <span class="hint">The cash price on the quote.</span>
+              </div>
+              <div class="field">
+                <label for="deposit">Deposit</label>
+                <div class="input-wrap"><span class="affix">£</span><input id="deposit" name="d" data-money="2" placeholder="e.g. 5,000"></div>
+                <span class="hint">Include any part-exchange and dealer contribution.</span>
+              </div>
+            </div>
+            <div class="note-box" id="credit-note">Enter the price and deposit to see how much you're borrowing.</div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header"><div><h2>The finance</h2><p>Copy these from the quote.</p></div></div>
+          <div class="stack">
+            <div class="row">
+              <div class="field">
+                <label for="term">Finance term</label>
+                <div class="input-wrap"><input id="term" name="t" type="number" min="1" max="120" step="1" placeholder="e.g. 48"><span class="affix suffix">months</span></div>
+                <span class="hint" id="term-hint">Usually 24, 36, 48 or 60.</span>
+              </div>
+              <div class="field">
+                <label for="monthly">Monthly payment</label>
+                <div class="input-wrap"><span class="affix">£</span><input id="monthly" name="m" data-money="2" placeholder="e.g. 378.12"></div>
+              </div>
+            </div>
+            <div class="field">
+              <label for="balloon">Final (balloon) payment</label>
+              <div class="input-wrap"><span class="affix">£</span><input id="balloon" name="b" data-money="2" placeholder="Leave blank for hire purchase"></div>
+              <span class="hint">On a PCP this is the "optional final payment" you pay to keep the car. Hire purchase usually has none.</span>
+            </div>
+            <div class="note-box" id="schedule-note">Enter the term and monthly payment to see your payment plan.</div>
+            <details class="explain options" id="more">
+              <summary>Payment count and fees</summary>
+              <div class="body stack">
+                <div class="field">
+                  <label for="count">Number of monthly payments</label>
+                  <div class="input-wrap"><input id="count" name="n" type="number" min="1" max="120" step="1" placeholder="Automatic"><span class="affix suffix">payments</span></div>
+                  <span class="hint" id="count-hint">Leave blank to use the usual layout for the term.</span>
+                </div>
+                <div class="row">
+                  <div class="field">
+                    <label for="feeStart">Arrangement fee</label>
+                    <div class="input-wrap"><span class="affix">£</span><input id="feeStart" name="f1" data-money="2" placeholder="0"></div>
+                    <span class="hint">Paid with the first payment.</span>
+                  </div>
+                  <div class="field">
+                    <label for="feeEnd">Option to purchase fee</label>
+                    <div class="input-wrap"><span class="affix">£</span><input id="feeEnd" name="f2" data-money="2" placeholder="0"></div>
+                    <span class="hint">Paid with the final payment.</span>
+                  </div>
+                </div>
+              </div>
+            </details>
+          </div>
+        </div>
+
+        <p class="muted small" style="margin-top:16px">Results update as you type. Your inputs are saved in the page address, so you can bookmark a quote or open another tab to compare.</p>
+      </div>
+
+      <section class="results-col" id="results" aria-label="Results">
+        <div class="card"><p class="muted">Enter the car price, deposit, term and monthly payment to see what the finance costs.</p></div>
+      </section>
+    </form>
+
+    <section class="card about" aria-labelledby="about-heading">
+      <h2 id="about-heading">About this car finance calculator</h2>
+      <p>Dealers and lenders show a finance quote as a list of numbers: the cash price, deposit, amount of credit, monthly payments, an optional final payment, the APR and the total amount payable. This calculator takes the handful of figures you can see and lays out what they mean, so you can see the cost of borrowing at a glance and compare quotes side by side.</p>
+      <h3>What it shows</h3>
+      <ul>
+        <li>How much you borrow, how much you pay back and how much of that is interest</li>
+        <li>The interest as an average a month and a year, and how much falls in each year of the agreement</li>
+        <li>The effective APR worked out from the payments, so you can check the figure on the quote</li>
+        <li>The monthly rate and the flat rate, and why they differ from the APR</li>
+        <li>How much you still owe over time, including the large balance a PCP leaves until the final payment</li>
+        <li>What a bigger deposit or a lower APR would do to the monthly payment and the interest</li>
+      </ul>
+      <h3>How it is calculated</h3>
+      <p>The calculator finds the monthly interest rate at which your payments exactly repay the amount borrowed. Monthly payments are made at the end of each month and the final payment in the last month of the term, which is how most UK quotes are laid out: a 48-month PCP is normally 47 monthly payments followed by the final payment in month 48. The APR is that monthly rate compounded over a year, as the consumer credit rules require, and includes any fees you enter. It does not cover excess mileage or damage charges at the end of a PCP, insurance or servicing. It is for guidance only and is not financial advice. Buying a home as well? Try the <a href="/mortgage/">mortgage calculator</a>.</p>
+    </section>
+  </main>
+
+  <aside class="mobile-summary" id="mobile-summary" aria-label="Results summary" hidden>
+    <div><div class="k">Total interest</div><div class="v" id="ms-int">£0</div></div>
+    <div style="text-align:right"><div class="k">APR</div><div class="v" id="ms-apr">0%</div></div>
+    <a href="#results">Details ↓</a>
+  </aside>
+
+  <footer class="site-footer">
+    <div class="inner">
+      <p class="footer-bar">
+        <button type="button" class="footer-link" data-about="about">About</button>
+        <button type="button" class="footer-link" data-about="privacy">Privacy</button>
+        <a href="https://github.com/farhanmunim/finance" target="_blank" rel="noopener">Source<span class="visually-hidden"> (opens in a new tab)</span></a>
+        <span>Runs entirely in your browser</span>
+        <span id="rates-updated" hidden></span>
+        <span>Not financial advice</span>
+        <span class="footer-built">Built by <a href="https://farhan.app" target="_blank" rel="noopener">Farhan<span class="visually-hidden"> (opens in a new tab)</span></a></span>
+      </p>
+    </div>
+  </footer>
+  <script type="module" src="/assets/js/car.js?v=ec872c5044"></script>
+  <script type="module" src="/assets/js/site.js?v=04aca99d83"></script>
+</body>
+</html>

@@ -18,7 +18,7 @@ function build() {
   const closeBtn = el('button', { type: 'button', class: 'btn', 'data-close': '', autofocus: true, text: 'Close' });
   const panel = el('div', { class: 'about-panel' }, [
     el('div', { class: 'about-head' }, [el('h2', { id: 'about-title', text: `About ${APP}` }), closeBtn]),
-    el('p', { html: '<b>Clear answers to everyday UK money questions.</b> Free calculators for income tax and take-home pay, mortgages, and pensions, built on official GOV.UK rates for anyone who wants a straight answer. They are for guidance only and are not financial advice. Not affiliated with HMRC or GOV.UK.' }),
+    el('p', { html: '<b>Clear answers to everyday UK money questions.</b> Free calculators for income tax and take-home pay, mortgages, pensions and car finance, built on official GOV.UK rates where they apply for anyone who wants a straight answer. They are for guidance only and are not financial advice. Not affiliated with HMRC or GOV.UK.' }),
     el('section', { id: 'about-privacy', 'aria-labelledby': 'about-privacy-h' }, [
       el('h3', { id: 'about-privacy-h', text: 'Privacy' }),
       el('p', { text: 'Everything you type stays on your device. The maths runs in your browser, and nothing you enter is sent to a server, saved in a cookie or kept in local storage.' }),
